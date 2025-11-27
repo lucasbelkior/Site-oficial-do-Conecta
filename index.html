@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Conecta Teams</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- User Imported Styles/Fonts -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link href="https://fonts.cdnfonts.com/css/oddval" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+      /* Dynamic Theme Variables */
+      :root {
+        /* Light Mode Defaults */
+        --bg-main: #F1F5F9; /* Slate 100 */
+        --bg-panel: #FFFFFF; /* White */
+        --text-main: #0F172A; /* Slate 900 */
+        --text-muted: #64748B; /* Slate 500 */
+        --border-color: rgba(0, 0, 0, 0.08);
+        --input-bg: #F8FAFC;
+      }
+
+      .dark {
+        /* Dark Mode Defaults */
+        --bg-main: #0B0C15;
+        --bg-panel: #151725;
+        --text-main: #E2E8F0; /* Slate 200 */
+        --text-muted: #94A3B8; /* Slate 400 */
+        --border-color: rgba(255, 255, 255, 0.05);
+        --input-bg: #151725;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(91, 197, 242, 0.2);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(91, 197, 242, 0.4);
+      }
+    </style>
+
+    <script>
+      tailwind.config = {
+        darkMode: 'class', // Enable class-based dark mode
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Oddval', 'sans-serif'],
+              oddval: ['Oddval', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                dark: 'var(--bg-main)',   // Dynamic Background
+                panel: 'var(--bg-panel)', // Dynamic Panel
+                blue: '#2A6AB2',
+                cyan: '#5BC5F2',
+                light: '#E2E8F0',
+                border: 'var(--border-color)', // Dynamic Border
+                text: 'var(--text-main)',      // Dynamic Text
+                muted: 'var(--text-muted)'     // Dynamic Muted Text
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-brand-dark text-brand-text font-sans antialiased overflow-hidden selection:bg-brand-cyan selection:text-white transition-colors duration-300">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
