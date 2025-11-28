@@ -1,5 +1,7 @@
 {
   "name": "Conecta Teams",
   "description": "A collaborative social network application styled after Microsoft Teams, featuring a sophisticated task and gamification system powered by an AI assistant. Manage tasks, track progress, and foster productivity through a points-based ranking system.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

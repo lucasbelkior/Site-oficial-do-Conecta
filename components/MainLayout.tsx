@@ -6,17 +6,19 @@ import { ChatWindow } from './ChatWindow';
 import { ChatInput } from './ChatInput';
 import { AdminPanel } from './AdminPanel';
 import { SocialPanel } from './SocialPanel';
-import { TeamsPanel } from './TeamsPanel'; // Import new component
+import { TeamsPanel } from './TeamsPanel';
+import { PlanningPanel } from './PlanningPanel'; // New component
 import { CalendarView } from './CalendarView';
 import { ChannelChat } from './ChannelChat';
 import { processCommand, getTechNews } from '../services/geminiService';
-import type { User, Task, Channel, Message, GeminiResponse, Post, TechNewsItem, ChannelMessage, Team } from '../types';
+import type { User, Task, Channel, Message, GeminiResponse, Post, TechNewsItem, ChannelMessage, Team, Attachment, GlobalReminder } from '../types';
 import { TaskStatus, MessageSender, Role } from '../types';
 import { 
     subscribeToTasks, 
     subscribeToChannels, 
     subscribeToChannelMessages,
     subscribeToTeams, 
+    subscribeToReminders, // New subscription
     addTaskToFirestore, 
     updateTaskInFirestore, 
     deleteTaskFromFirestore,
@@ -29,7 +31,7 @@ interface MainLayoutProps {
     currentUser: User;
     onLogout: () => void;
     allUsers: User[];
-    allChannels: Channel[]; // We fetch channels dynamically now, but keep prop signature for simplicity
+    allChannels: Channel[];
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, allUsers }) => {
@@ -37,7 +39,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const [tasks, setTasks] = useState<Task[]>([]);
     const [channels, setChannels] = useState<Channel[]>([]);
     const [channelMessages, setChannelMessages] = useState<ChannelMessage[]>([]);
-    const [teams, setTeams] = useState<Team[]>([]); // Teams state
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [reminders, setReminders] = useState<GlobalReminder[]>([]); // New state
 
     const [messages, setMessages] = useState<Message[]>([
       { id: 1, text: `Olá ${currentUser.name}! Sou o assistente da Conecta. Como posso ajudar a equipe hoje?`, sender: MessageSender.ASSISTANT}
@@ -45,8 +48,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const [isLoading, setIsLoading] = useState(false);
     const [chatInputText, setChatInputText] = useState('');
     
-    // Updated view state to include calendar, channel and teams
-    const [view, setView] = useState<'assistant' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams'>('assistant');
+    // Updated view state to include calendar, channel, teams, and planning
+    const [view, setView] = useState<'assistant' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams' | 'planning'>('assistant');
     const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
     const [viewingMember, setViewingMember] = useState<User | null>(null);
     
@@ -62,19 +65,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         const unsubTasks = subscribeToTasks(setTasks);
         const unsubChannels = subscribeToChannels(setChannels);
         const unsubMessages = subscribeToChannelMessages(setChannelMessages);
-        const unsubTeams = subscribeToTeams(setTeams); // Subscribe to teams
+        const unsubTeams = subscribeToTeams(setTeams);
+        const unsubReminders = subscribeToReminders(setReminders);
 
         return () => {
             unsubTasks();
             unsubChannels();
             unsubMessages();
             unsubTeams();
+            unsubReminders();
         };
     }, []);
 
     useEffect(() => {
         const fetchNews = async () => {
-            if (view === 'social' && techNews.length === 0) {
+            // Only fetch news if view is social AND user is not BOSS (since boss has no news feed)
+            if (view === 'social' && currentUser.role !== Role.PATRAO && techNews.length === 0) {
                 setIsLoadingNews(true);
                 try {
                     const news = await getTechNews();
@@ -87,7 +93,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
             }
         };
         fetchNews();
-    }, [view, techNews.length]);
+    }, [view, techNews.length, currentUser.role]);
 
     // --- Visibility Logic (Shared Teams) ---
     const visibleUsers = useMemo(() => {
@@ -105,10 +111,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                 team.members.forEach(memberId => allowedUserIds.add(memberId));
             }
         });
+        
+        // BOSS Override: Boss can see everyone if not explicitly in teams, but sticking to team logic is safer.
+        // If we want Boss to see everyone regardless:
+        if (currentUser.role === Role.PATRAO) {
+             return allUsers;
+        }
 
         // 3. Filter the main user list
         return allUsers.filter(user => allowedUserIds.has(user.id));
-    }, [allUsers, teams, currentUser.id]);
+    }, [allUsers, teams, currentUser.id, currentUser.role]);
 
 
     // --- Task Handlers (Persisted) ---
@@ -241,6 +253,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         setActiveChannelId(null);
     };
     
+    const handleTogglePlanningView = () => {
+         setView(prev => prev === 'planning' ? 'assistant' : 'planning');
+         setActiveChannelId(null);
+    };
+    
     const handleToggleAssistantView = () => {
         setView('assistant');
         setViewingMember(null);
@@ -272,7 +289,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         setViewingMember(null);
     };
     
-    const handleSendChannelMessage = async (text: string, specificChannelId?: string) => {
+    const handleSendChannelMessage = async (text: string, specificChannelId?: string, attachments?: Attachment[]) => {
         const targetChannelId = specificChannelId || activeChannelId;
         if (!targetChannelId) return;
         const newMessage: ChannelMessage = {
@@ -280,7 +297,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
             channelId: targetChannelId,
             userId: currentUser.id,
             text,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            attachments // Pass attachments
         };
         await addMessageToFirestore(newMessage);
     };
@@ -296,7 +314,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
 
     const renderMainContent = () => {
         if (view === 'calendar') {
-            return <CalendarView tasks={tasks} />;
+            return <CalendarView tasks={tasks} globalReminders={reminders} />;
+        }
+        
+        if (view === 'planning' && currentUser.role === Role.PATRAO) {
+             return <PlanningPanel reminders={reminders} currentUser={currentUser} />;
         }
 
         if (view === 'teams') {
@@ -322,7 +344,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                         messages={messages}
                         currentUser={currentUser}
                         allUsers={allUsers}
-                        onSendMessage={(text) => handleSendChannelMessage(text)}
+                        onSendMessage={(text, attachments) => handleSendChannelMessage(text, undefined, attachments)}
                     />
                 );
             }
@@ -343,7 +365,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
             );
         }
         
-        if (view === 'social' && currentUser.role === Role.MEMBRO) {
+        if (view === 'social') {
+            // Boss sees simplified chat (no feed), Members see full social
+            const isBoss = currentUser.role === Role.PATRAO;
             return (
                 <SocialPanel 
                     currentUser={currentUser}
@@ -351,6 +375,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                     posts={posts}
                     techNews={techNews}
                     isLoadingNews={isLoadingNews}
+                    teams={teams} // Pass teams for filtering contacts
+                    showFeed={!isBoss} // HIDE feed for Boss
                     onCreatePost={(text) => {
                         const newPost: Post = {
                             id: `p-${Date.now()}`,
@@ -401,6 +427,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                     onToggleAssistantView={handleToggleAssistantView}
                     onToggleCalendarView={handleToggleCalendarView}
                     onToggleTeamsView={handleToggleTeamsView}
+                    onTogglePlanningView={handleTogglePlanningView}
                     onSelectChannel={handleSelectChannel}
                     onViewMember={handleViewMember}
                 />

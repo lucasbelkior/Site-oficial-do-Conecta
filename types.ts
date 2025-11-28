@@ -46,6 +46,8 @@ export interface Team {
     ownerId: string;
     members: string[]; // User IDs
     createdAt: string;
+    logoUrl?: string;    // New: Custom Logo
+    themeColor?: string; // New: Custom Color (hex)
 }
 
 export interface Channel {
@@ -65,12 +67,19 @@ export interface Message {
   sender: MessageSender;
 }
 
+export interface Attachment {
+    type: 'image' | 'video' | 'file' | 'audio';
+    url: string;
+    name?: string;
+}
+
 export interface ChannelMessage {
   id: string;
   channelId: string;
   userId: string;
   text: string;
   timestamp: string;
+  attachments?: Attachment[]; // New: Attachments
 }
 
 export interface GeminiResponse {
@@ -89,6 +98,7 @@ export interface SocialMessage {
   senderId: string;
   text: string;
   timestamp: string;
+  attachments?: Attachment[]; // New: Attachments
 }
 
 export interface Conversation {
@@ -107,4 +117,13 @@ export interface TechNewsItem {
   title: string;
   summary: string;
   source: string;
+}
+
+export interface GlobalReminder {
+    id: string;
+    title: string;
+    date: string; // DD/MM/YYYY
+    type: 'meeting' | 'holiday' | 'event';
+    time?: string;
+    createdBy: string;
 }

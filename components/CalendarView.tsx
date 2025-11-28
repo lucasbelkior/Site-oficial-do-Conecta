@@ -1,37 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Task } from '../types';
+import type { Task, GlobalReminder } from '../types';
 import { TaskStatus } from '../types';
 import { ArrowLeftIcon, CalendarIcon, CheckCircleIcon, ClockIcon, BellIcon } from './Icons';
 
 interface CalendarViewProps {
     tasks: Task[];
+    globalReminders?: GlobalReminder[]; // Props updated to accept real reminders
 }
 
-interface Reminder {
-    id: number;
-    title: string;
-    date: string; // DD/MM/YYYY
-    type: 'meeting' | 'holiday' | 'event';
-    time?: string;
-}
-
-export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminders = [] }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-
-    // Mock Reminders generator based on current month to ensure visibility
-    const reminders: Reminder[] = useMemo(() => {
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        
-        return [
-            { id: 101, title: 'Sprint Review', date: `05/${month}/${year}`, type: 'meeting', time: '10:00' },
-            { id: 102, title: 'Almoço de Equipe', date: `12/${month}/${year}`, type: 'event', time: '12:30' },
-            { id: 103, title: 'Feriado Local', date: `20/${month}/${year}`, type: 'holiday' },
-            { id: 104, title: 'Planejamento Q3', date: `28/${month}/${year}`, type: 'meeting', time: '14:00' },
-        ];
-    }, [currentDate]);
 
     const getDaysInMonth = (year: number, month: number) => {
         return new Date(year, month + 1, 0).getDate();
@@ -51,6 +31,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
 
     const isSameDate = (dateStr: string, dateObj: Date) => {
         // format of dateStr is DD/MM/YYYY
+        // dateStr from input type='date' in planning panel might be YYYY-MM-DD if not formatted before save
+        // but we formatted it in PlanningPanel to DD/MM/YYYY.
         const [d, m, y] = dateStr.split('/');
         return parseInt(d) === dateObj.getDate() && 
                parseInt(m) === dateObj.getMonth() + 1 && 
@@ -63,7 +45,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
         const dateObj = new Date(year, month, day);
 
         const dayTasks = tasks.filter(t => t.deadline && isSameDate(t.deadline, dateObj));
-        const dayReminders = reminders.filter(r => isSameDate(r.date, dateObj));
+        // Filter global reminders
+        const dayReminders = globalReminders.filter(r => isSameDate(r.date, dateObj));
 
         return { tasks: dayTasks, reminders: dayReminders };
     };
@@ -88,8 +71,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
             const isToday = new Date().toDateString() === dateObj.toDateString();
             const isSelected = selectedDate.toDateString() === dateObj.toDateString();
             
-            const hasContent = dayTasks.length > 0 || dayReminders.length > 0;
-
             days.push(
                 <button 
                     key={day} 
@@ -135,10 +116,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
         const dateStr = `${selectedDate.getDate().toString().padStart(2, '0')}/${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
         
         const dayTasks = tasks.filter(t => t.deadline === dateStr);
-        const dayReminders = reminders.filter(r => r.date === dateStr);
+        const dayReminders = globalReminders.filter(r => r.date === dateStr);
         
         return { dayTasks, dayReminders };
-    }, [selectedDate, tasks, reminders]);
+    }, [selectedDate, tasks, globalReminders]);
 
     return (
         <div className="flex h-full bg-[#0B0C15]">
@@ -194,7 +175,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
                         <div className="text-center py-10 opacity-40">
                             <BellIcon className="h-12 w-12 text-slate-600 mx-auto mb-3" />
                             <p className="text-slate-400 text-sm">Nada agendado para este dia.</p>
-                            <button className="mt-4 text-cyan-400 text-xs font-bold hover:underline">Adicionar Lembrete</button>
                         </div>
                     )}
 

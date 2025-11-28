@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import type { Task, User, Channel } from '../types';
 import { TaskStatus, Role } from '../types';
-import { EditIcon, TrashIcon, CheckCircleIcon, ArrowLeftIcon, TrophyIcon, DashboardIcon, SparklesIcon } from './Icons';
+import { EditIcon, TrashIcon, CheckCircleIcon, ArrowLeftIcon, TrophyIcon, DashboardIcon, SparklesIcon, UsersIcon } from './Icons';
 import { TaskModal } from './TaskModal';
 import { updateUserRole } from '../database';
 
@@ -48,6 +48,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tasks, users, channels, 
     const handleDeleteClick = (taskId: number, taskTitle: string) => {
         if (window.confirm(`Tem certeza que deseja excluir a tarefa "${taskTitle}"?`)) {
             onDeleteTask(taskId);
+        }
+    };
+
+    const handleToggleRole = async (user: User) => {
+        const newRole = user.role === Role.PATRAO ? Role.MEMBRO : Role.PATRAO;
+        const action = newRole === Role.PATRAO ? "promover" : "rebaixar";
+        
+        if (window.confirm(`Deseja realmente ${action} ${user.name} para ${newRole}?`)) {
+            try {
+                await updateUserRole(user.id, newRole);
+            } catch (error) {
+                console.error("Erro ao alterar cargo:", error);
+                alert("Erro ao atualizar usuário.");
+            }
         }
     };
     
@@ -104,6 +118,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tasks, users, channels, 
             </div>
         );
 
+        // New User Management List
+        const UserManagementList = () => (
+             <div className="bg-[#151725]/60 backdrop-blur-md border border-white/5 rounded-[1.5rem] overflow-hidden flex flex-col h-full">
+                <div className="px-6 py-5 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+                    <h3 className="font-semibold text-white tracking-wide text-sm">Gestão de Usuários</h3>
+                    <span className="text-xs bg-white/10 px-2.5 py-1 rounded-full text-slate-300 font-mono">{users.length}</span>
+                </div>
+                <div className="divide-y divide-white/5 overflow-y-auto max-h-[400px] custom-scrollbar">
+                    {users.map(user => (
+                        <div key={user.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                             <div className="flex items-center space-x-3">
+                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold ${user.role === Role.PATRAO ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                                    {user.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-white">{user.name}</p>
+                                    <p className="text-[10px] text-slate-500">{user.email || 'Sem email'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded border ${user.role === Role.PATRAO ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' : 'text-slate-400 border-slate-600/30 bg-slate-600/10'}`}>
+                                    {user.role}
+                                </span>
+                                <button 
+                                    onClick={() => handleToggleRole(user)}
+                                    className="text-[10px] font-bold text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-3 py-1.5 rounded transition-all"
+                                >
+                                    Trocar Cargo
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
         return (
             <div className="max-w-7xl mx-auto space-y-8 p-6">
                 <header className="flex items-center justify-between">
@@ -123,8 +173,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tasks, users, channels, 
                 </section>
                 
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[500px]">
-                    <TaskList title="Fila de Pendências" tasklist={pendingTasks} />
-                    <TaskList title="Histórico de Conclusões" tasklist={completedTasks} />
+                    <div className="flex flex-col gap-8 h-full">
+                         <TaskList title="Fila de Pendências" tasklist={pendingTasks} />
+                    </div>
+                    <div className="flex flex-col gap-8 h-full">
+                         <UserManagementList />
+                    </div>
                 </section>
             </div>
         );
@@ -144,6 +198,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tasks, users, channels, 
                 } catch (error) {
                     console.error("Error promoting user:", error);
                     alert("Erro ao promover usuário.");
+                }
+            }
+        };
+        
+        const handleDemote = async () => {
+             if (window.confirm(`Tem certeza que deseja rebaixar ${member.name} para Membro?`)) {
+                try {
+                    await updateUserRole(member.id, Role.MEMBRO);
+                    onBackToDashboard();
+                } catch (error) {
+                    console.error("Error demoting user:", error);
+                    alert("Erro ao rebaixar usuário.");
                 }
             }
         };
@@ -182,13 +248,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tasks, users, channels, 
                              <p className="text-slate-400 text-sm mt-1">Análise detalhada de <span className="text-cyan-400 font-semibold">{member.name}</span></p>
                         </div>
                     </div>
-                    {member.role === Role.MEMBRO && (
+                    {member.role === Role.MEMBRO ? (
                         <button 
                             onClick={handlePromote}
                             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2 px-6 rounded-xl shadow-lg shadow-purple-900/40 transition-all text-sm flex items-center gap-2"
                         >
                             <SparklesIcon className="h-4 w-4" />
                             Promover a Admin
+                        </button>
+                    ) : (
+                         <button 
+                            onClick={handleDemote}
+                            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-6 rounded-xl transition-all text-sm flex items-center gap-2 border border-slate-600"
+                        >
+                            Rebaixar para Membro
                         </button>
                     )}
                 </header>

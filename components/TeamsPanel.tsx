@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import type { User, Team, Channel, ChannelMessage } from '../types';
 import { Role } from '../types';
 import { addTeamToFirestore, addChannelToFirestore, joinTeamInFirestore } from '../database';
-import { UsersIcon, HashtagIcon, ArrowLeftIcon, MessageSquareIcon } from './Icons';
+import { UsersIcon, HashtagIcon, ArrowLeftIcon, MessageSquareIcon, EditIcon } from './Icons';
 import { ChannelChat } from './ChannelChat';
 
 interface TeamsPanelProps {
@@ -12,7 +12,7 @@ interface TeamsPanelProps {
     allTeams: Team[];
     allChannels: Channel[];
     allChannelMessages: ChannelMessage[];
-    onSendChannelMessage: (text: string, channelId: string) => void;
+    onSendChannelMessage: (text: string, channelId: string, attachments?: any[]) => void;
 }
 
 export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, allTeams, allChannels, allChannelMessages, onSendChannelMessage }) => {
@@ -24,14 +24,29 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
     const [newTeamName, setNewTeamName] = useState('');
     const [newTeamDesc, setNewTeamDesc] = useState('');
+    const [newTeamColor, setNewTeamColor] = useState('#22c55e'); // Default Green
+    const [newTeamLogo, setNewTeamLogo] = useState('');
     
     const [isCreatingChannel, setIsCreatingChannel] = useState(false);
     const [newChannelName, setNewChannelName] = useState('');
 
     // Search State
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const logoInputRef = useRef<HTMLInputElement>(null);
 
     // --- Actions ---
+
+    const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+             const reader = new FileReader();
+             reader.onload = () => {
+                 setNewTeamLogo(reader.result as string);
+             };
+             reader.readAsDataURL(file);
+        }
+    };
 
     const handleCreateTeam = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,7 +57,9 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
             description: newTeamDesc,
             ownerId: currentUser.id,
             members: [currentUser.id],
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            logoUrl: newTeamLogo,
+            themeColor: newTeamColor
         };
 
         try {
@@ -50,6 +67,8 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
             setIsCreatingTeam(false);
             setNewTeamName('');
             setNewTeamDesc('');
+            setNewTeamLogo('');
+            setNewTeamColor('#22c55e');
         } catch (error) {
             console.error("Error creating team:", error);
         }
@@ -99,6 +118,12 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
     const currentChannelMessages = selectedChannel
         ? allChannelMessages.filter(m => m.channelId === selectedChannel.id)
         : [];
+        
+    // Dynamic styles based on team theme
+    const sidebarStyle = selectedTeam ? {
+        backgroundColor: `${selectedTeam.themeColor}10`, // 10% opacity
+        borderRight: `1px solid ${selectedTeam.themeColor}30`
+    } : {};
 
     // --- Renders ---
 
@@ -130,24 +155,56 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                         <div className="bg-[#151725] border border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
                             <h2 className="text-xl font-bold text-white mb-4">Criar Nova Equipe</h2>
                             <form onSubmit={handleCreateTeam} className="space-y-4">
+                                <div className="flex justify-center mb-4">
+                                     <div 
+                                        className="h-24 w-24 rounded-2xl border-2 border-dashed border-slate-500 flex items-center justify-center cursor-pointer hover:border-white transition-colors overflow-hidden relative"
+                                        onClick={() => logoInputRef.current?.click()}
+                                    >
+                                        {newTeamLogo ? (
+                                            <img src={newTeamLogo} className="w-full h-full object-cover" alt="Logo preview" />
+                                        ) : (
+                                            <div className="text-center">
+                                                <EditIcon className="h-6 w-6 text-slate-500 mx-auto" />
+                                                <span className="text-[10px] text-slate-500 block mt-1">Logo</span>
+                                            </div>
+                                        )}
+                                        <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoSelect} />
+                                    </div>
+                                </div>
+                            
                                 <div>
                                     <label className="text-xs text-slate-400 uppercase font-bold">Nome da Equipe</label>
                                     <input 
                                         type="text" 
                                         value={newTeamName} 
                                         onChange={e => setNewTeamName(e.target.value)}
-                                        className="w-full bg-[#0B0C15] border border-white/10 rounded-lg p-3 text-white mt-1"
+                                        className="w-full bg-[#0B0C15] border border-white/10 rounded-lg p-3 text-white mt-1 focus:border-green-500 outline-none"
                                         placeholder="Ex: Squad Alpha"
                                         required
                                     />
                                 </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                     <div>
+                                        <label className="text-xs text-slate-400 uppercase font-bold">Cor do Tema</label>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <input 
+                                                type="color" 
+                                                value={newTeamColor} 
+                                                onChange={e => setNewTeamColor(e.target.value)}
+                                                className="w-10 h-10 rounded cursor-pointer bg-transparent border-none"
+                                            />
+                                            <span className="text-xs text-slate-500">{newTeamColor}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="text-xs text-slate-400 uppercase font-bold">Descrição</label>
-                                    <input 
-                                        type="text" 
+                                    <textarea 
                                         value={newTeamDesc} 
                                         onChange={e => setNewTeamDesc(e.target.value)}
-                                        className="w-full bg-[#0B0C15] border border-white/10 rounded-lg p-3 text-white mt-1"
+                                        className="w-full bg-[#0B0C15] border border-white/10 rounded-lg p-3 text-white mt-1 focus:border-green-500 outline-none resize-none h-20"
                                         placeholder="Descrição curta..."
                                     />
                                 </div>
@@ -176,15 +233,22 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                     {filteredTeams.map(team => {
                         const isMember = team.members.includes(currentUser.id);
                         return (
-                            <div key={team.id} className="bg-[#151725]/60 border border-white/5 rounded-2xl p-6 hover:border-green-500/30 transition-all group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center border border-green-500/10">
-                                        <UsersIcon className="h-6 w-6 text-green-400" />
+                            <div key={team.id} className="bg-[#151725]/60 border border-white/5 rounded-2xl p-6 hover:border-opacity-50 transition-all group relative overflow-hidden" style={{ borderColor: `${team.themeColor}30` }}>
+                                {/* Color Accent */}
+                                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: team.themeColor || '#22c55e' }}></div>
+                                
+                                <div className="flex justify-between items-start mb-4 pl-2">
+                                    <div className="h-14 w-14 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 bg-black/20">
+                                        {team.logoUrl ? (
+                                            <img src={team.logoUrl} className="w-full h-full object-cover" alt={team.name} />
+                                        ) : (
+                                             <UsersIcon className="h-6 w-6 text-slate-400" />
+                                        )}
                                     </div>
                                     <span className="text-xs bg-white/5 px-2 py-1 rounded text-slate-400">{team.members.length} membros</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-white mb-2">{team.name}</h3>
-                                <p className="text-slate-400 text-sm mb-6 line-clamp-2">{team.description || "Sem descrição."}</p>
+                                <h3 className="text-xl font-bold text-white mb-2 pl-2">{team.name}</h3>
+                                <p className="text-slate-400 text-sm mb-6 line-clamp-2 pl-2">{team.description || "Sem descrição."}</p>
                                 
                                 {isMember ? (
                                     <button 
@@ -196,7 +260,8 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                                 ) : (
                                     <button 
                                         onClick={() => handleJoinTeam(team)}
-                                        className="w-full bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white py-2.5 rounded-xl font-medium border border-green-600/20 hover:border-green-600 transition-all"
+                                        className="w-full hover:brightness-110 text-white py-2.5 rounded-xl font-medium transition-all"
+                                        style={{ backgroundColor: team.themeColor || '#22c55e' }}
                                     >
                                         Entrar na Equipe
                                     </button>
@@ -218,20 +283,30 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
     return (
         <div className="h-full flex bg-[#0B0C15]">
             {/* Team Sidebar */}
-            <div className="w-64 bg-[#0F1018] border-r border-white/5 flex flex-col">
+            <div className="w-64 flex flex-col border-r border-white/5" style={sidebarStyle}>
                 <div className="p-4 border-b border-white/5">
                     <button onClick={() => { setSelectedTeam(null); setSelectedChannel(null); }} className="flex items-center text-slate-400 hover:text-white text-xs mb-3 transition-colors">
                         <ArrowLeftIcon className="h-4 w-4 mr-1" /> Voltar
                     </button>
-                    <h2 className="font-bold text-white truncate text-lg" title={selectedTeam.name}>{selectedTeam.name}</h2>
+                    
+                    <div className="flex items-center gap-3 mb-2">
+                         <div className="h-10 w-10 rounded-lg overflow-hidden border border-white/10 bg-black/20 flex-shrink-0">
+                            {selectedTeam.logoUrl ? (
+                                <img src={selectedTeam.logoUrl} className="w-full h-full object-cover" alt="" />
+                            ) : (
+                                 <div className="w-full h-full flex items-center justify-center bg-white/5"><UsersIcon className="h-5 w-5 text-slate-400"/></div>
+                            )}
+                        </div>
+                        <h2 className="font-bold text-white truncate text-lg leading-tight" title={selectedTeam.name}>{selectedTeam.name}</h2>
+                    </div>
                     <p className="text-xs text-slate-500 truncate">{selectedTeam.description}</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3">
+                <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
                     <div className="flex items-center justify-between mb-2 px-2 mt-2">
                         <span className="text-[10px] font-bold text-slate-500 uppercase">Canais de Texto</span>
                         {selectedTeam.ownerId === currentUser.id && (
-                            <button onClick={() => setIsCreatingChannel(true)} className="text-slate-500 hover:text-green-400 text-lg leading-none">+</button>
+                            <button onClick={() => setIsCreatingChannel(true)} className="text-slate-500 hover:text-white text-lg leading-none" style={{ color: selectedTeam.themeColor }}>+</button>
                         )}
                     </div>
 
@@ -243,24 +318,29 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                                 value={newChannelName} 
                                 onChange={e => setNewChannelName(e.target.value)}
                                 placeholder="Nome do canal..."
-                                className="w-full bg-[#151725] text-xs p-2 rounded text-white border border-green-500/50 outline-none"
+                                className="w-full bg-[#151725] text-xs p-2 rounded text-white border outline-none"
+                                style={{ borderColor: selectedTeam.themeColor || '#22c55e' }}
                                 onBlur={() => setIsCreatingChannel(false)}
                             />
                         </form>
                     )}
 
                     <ul className="space-y-1">
-                        {teamChannels.map(channel => (
-                            <li key={channel.id}>
-                                <button 
-                                    onClick={() => setSelectedChannel(channel)}
-                                    className={`w-full flex items-center px-2 py-1.5 rounded-md text-sm transition-colors ${selectedChannel?.id === channel.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-300'}`}
-                                >
-                                    <HashtagIcon className="h-4 w-4 mr-2 opacity-70" />
-                                    {channel.name.replace('#', '')}
-                                </button>
-                            </li>
-                        ))}
+                        {teamChannels.map(channel => {
+                            const isActive = selectedChannel?.id === channel.id;
+                            return (
+                                <li key={channel.id}>
+                                    <button 
+                                        onClick={() => setSelectedChannel(channel)}
+                                        className={`w-full flex items-center px-2 py-1.5 rounded-md text-sm transition-colors ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-300'}`}
+                                        style={isActive ? { borderLeft: `3px solid ${selectedTeam.themeColor || '#22c55e'}` } : { borderLeft: '3px solid transparent' }}
+                                    >
+                                        <HashtagIcon className="h-4 w-4 mr-2 opacity-70" />
+                                        {channel.name.replace('#', '')}
+                                    </button>
+                                </li>
+                            );
+                        })}
                         {teamChannels.length === 0 && (
                             <li className="text-xs text-slate-600 px-2 italic">Nenhum canal criado.</li>
                         )}
@@ -276,14 +356,18 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                         messages={currentChannelMessages}
                         currentUser={currentUser}
                         allUsers={allUsers}
-                        onSendMessage={(text) => onSendChannelMessage(text, selectedChannel.id)}
+                        onSendMessage={(text, attachments) => onSendChannelMessage(text, selectedChannel.id, attachments)}
                     />
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                            <MessageSquareIcon className="h-8 w-8" />
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 relative overflow-hidden">
+                        {selectedTeam.logoUrl && (
+                             <img src={selectedTeam.logoUrl} className="absolute inset-0 w-full h-full object-cover opacity-5 blur-xl pointer-events-none" alt="" />
+                        )}
+                        <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center mb-6 z-10">
+                            <MessageSquareIcon className="h-10 w-10 text-slate-400" />
                         </div>
-                        <p>Selecione um canal para conversar.</p>
+                        <h3 className="text-xl font-bold text-white mb-2 z-10">Bem-vindo ao {selectedTeam.name}</h3>
+                        <p className="z-10">Selecione um canal à esquerda para começar a colaborar.</p>
                     </div>
                 )}
             </div>

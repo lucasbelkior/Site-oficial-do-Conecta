@@ -9,7 +9,7 @@ interface SidebarProps {
     users: User[];
     tasks: Task[];
     currentUser: User;
-    view: 'assistant' | 'tasks' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams';
+    view: 'assistant' | 'tasks' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams' | 'planning';
     activeChannelId: string | null;
     onLogout: () => void;
     onInitiateEdit: (taskId: number) => void;
@@ -18,11 +18,12 @@ interface SidebarProps {
     onToggleAssistantView: () => void;
     onToggleCalendarView: () => void;
     onToggleTeamsView: () => void;
+    onTogglePlanningView?: () => void; // New prop for Planning
     onSelectChannel: (channelId: string) => void;
     onViewMember: (userId: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, currentUser, view, activeChannelId, onLogout, onInitiateEdit, onToggleAdminView, onToggleSocialView, onToggleAssistantView, onToggleCalendarView, onToggleTeamsView, onSelectChannel, onViewMember }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, currentUser, view, activeChannelId, onLogout, onInitiateEdit, onToggleAdminView, onToggleSocialView, onToggleAssistantView, onToggleCalendarView, onToggleTeamsView, onTogglePlanningView, onSelectChannel, onViewMember }) => {
     const sortedUsers = [...users].sort((a, b) => b.points - a.points);
     
     // Filter only global channels (those without teamId)
@@ -72,16 +73,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, curren
                         <span className="font-medium text-sm">Calendário</span>
                     </button>
 
-                    {/* Social Hub */}
-                     {currentUser.role === Role.MEMBRO && (
-                        <button 
-                            onClick={onToggleSocialView}
-                            className={navButtonClass(view === 'social')}
-                        >
-                            <MessageSquareIcon className="h-5 w-5" />
-                            <span className="font-medium text-sm">Social Hub</span>
-                        </button>
-                    )}
+                    {/* Social Hub / Chat for Boss */}
+                     <button 
+                        onClick={onToggleSocialView}
+                        className={navButtonClass(view === 'social')}
+                    >
+                        <MessageSquareIcon className="h-5 w-5" />
+                        <span className="font-medium text-sm">{currentUser.role === Role.PATRAO ? 'Chat' : 'Social Hub'}</span>
+                    </button>
 
                     {/* Teams Button */}
                     <button 
@@ -93,13 +92,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, curren
                     </button>
 
                      {currentUser.role === Role.PATRAO && (
-                        <button 
-                            onClick={onToggleAdminView}
-                            className={navButtonClass(view === 'admin')}
-                        >
-                            <DashboardIcon className="h-5 w-5" />
-                            <span className="font-medium text-sm">Painel de Controle</span>
-                        </button>
+                        <>
+                            <button 
+                                onClick={onToggleAdminView}
+                                className={navButtonClass(view === 'admin')}
+                            >
+                                <DashboardIcon className="h-5 w-5" />
+                                <span className="font-medium text-sm">Painel de Controle</span>
+                            </button>
+                            
+                            <button 
+                                onClick={onTogglePlanningView}
+                                className={navButtonClass(view === 'planning')}
+                            >
+                                <CalendarIcon className="h-5 w-5 text-purple-400" />
+                                <span className="font-medium text-sm">Planejamento</span>
+                            </button>
+                        </>
                     )}
                 </div>
 
@@ -216,9 +225,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, curren
                             <span className="text-[9px] text-cyan-400 uppercase tracking-widest font-semibold mt-0.5 opacity-80">{currentUser.role}</span>
                         </div>
                     </div>
-                    <button onClick={onLogout} className="text-brand-muted hover:text-red-400 transition-colors p-2 hover:bg-red-400/10 rounded-lg" title="Sair">
-                        <LogOutIcon className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center">
+                        <button onClick={onLogout} className="text-brand-muted hover:text-red-400 transition-colors p-2 hover:bg-red-400/10 rounded-lg" title="Sair">
+                            <LogOutIcon className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </aside>

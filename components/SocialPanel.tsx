@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import type { User, Conversation, SocialMessage, Post, TechNewsItem } from '../types';
+import type { User, Conversation, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
 import { Role } from '../types';
 import { initialConversations } from '../socialDatabase';
-import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, SparklesIcon } from './Icons';
+import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon } from './Icons';
 import { CallModal } from './CallModal';
 import { UserProfile } from './UserProfile';
 
@@ -13,31 +13,60 @@ interface SocialPanelProps {
     posts: Post[];
     techNews: TechNewsItem[];
     isLoadingNews: boolean;
+    teams: Team[]; // Added teams prop to filter contacts
     onCreatePost: (text: string) => void;
+    showFeed?: boolean; // New prop to toggle feed visibility
 }
 
 const MAX_POST_LENGTH = 280;
 
-export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, onCreatePost }) => {
-    const [socialView, setSocialView] = useState<'feed' | 'chat' | 'profile'>('feed');
+export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, teams, onCreatePost, showFeed = true }) => {
+    // Default to 'chat' if feed is hidden
+    const [socialView, setSocialView] = useState<'feed' | 'chat' | 'profile'>(showFeed ? 'feed' : 'chat');
     const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [messageText, setMessageText] = useState('');
     const [postText, setPostText] = useState('');
     const [callState, setCallState] = useState<{ active: boolean; type: 'audio' | 'video' | null; target: User | null }>({ active: false, type: null, target: null });
     
+    // File & Audio States
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [isRecording, setIsRecording] = useState(false);
+    const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+    const [isSimulatingAudio, setIsSimulatingAudio] = useState(false);
+    
     // Determine which user profile to show. For now, 'profile' view is My Profile.
-    // Future expansion: viewing other profiles via ID.
     const [profileUser, setProfileUser] = useState<User>(currentUser);
 
     const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
-    const members = allUsers.filter(u => u.role === Role.MEMBRO);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Filter logic: Show only users who share a team with the current user
+    const teamMembers = useMemo(() => {
+        // If I am the boss (Role.PATRAO), show everyone who is a member of my created teams OR all members if I haven't created specific teams yet?
+        // Let's stick to the shared team logic, but ensure the boss is considered "in" the teams they own.
+        // Or simpler: If boss, just show all users for now to ensure they can chat.
+        if (currentUser.role === Role.PATRAO) {
+             return allUsers.filter(u => u.id !== currentUser.id);
+        }
+
+        const myTeamIds = teams
+            .filter(t => t.members.includes(currentUser.id))
+            .map(t => t.id);
+            
+        return allUsers.filter(u => {
+            if (u.id === currentUser.id) return false; // Don't show self in list
+            // Check if user is in any of my teams
+            const userTeams = teams.filter(t => t.members.includes(u.id));
+            return userTeams.some(t => myTeamIds.includes(t.id));
+        });
+    }, [allUsers, teams, currentUser]);
+
     const userMap = useMemo(() => new Map(allUsers.map(user => [user.id, user])), [allUsers]);
 
     // Keep profileUser synced with currentUser updates from App state
     useEffect(() => {
         if (profileUser.id === currentUser.id) {
-            // Find the updated current user in allUsers to ensure we have latest data
             const updated = allUsers.find(u => u.id === currentUser.id);
             if (updated) setProfileUser(updated);
         }
@@ -45,7 +74,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     useEffect(() => {
         endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [activeConversation?.messages]);
+    }, [activeConversation?.messages, attachments]);
 
     const findOrCreateConversation = (participantId: string): Conversation => {
         const existing = conversations.find(c => 
@@ -65,23 +94,26 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         const conversation = findOrCreateConversation(member.id);
         setActiveConversation(conversation);
         setSocialView('chat');
+        setAttachments([]); // clear attachments on switch
     };
 
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!messageText.trim() || !activeConversation) return;
+        if ((!messageText.trim() && attachments.length === 0) || !activeConversation) return;
 
         const newMessage: SocialMessage = {
             id: `msg-${Date.now()}`,
             senderId: currentUser.id,
             text: messageText,
             timestamp: new Date().toISOString(),
+            attachments: attachments.length > 0 ? attachments : undefined
         };
 
         const updatedConversation = { ...activeConversation, messages: [...activeConversation.messages, newMessage] };
         setConversations(prev => prev.map(c => c.participantIds.sort().join(',') === updatedConversation.participantIds.sort().join(',') ? updatedConversation : c));
         setActiveConversation(updatedConversation);
         setMessageText('');
+        setAttachments([]);
     };
     
     const handleCreatePost = () => {
@@ -89,6 +121,77 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         onCreatePost(postText);
         setPostText('');
     };
+
+    // File Handling
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+         if (e.target.files) {
+            Array.from(e.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = reader.result as string;
+                    let type: 'image' | 'video' | 'file' = 'file';
+                    if (file.type.startsWith('image/')) type = 'image';
+                    if (file.type.startsWith('video/')) type = 'video';
+                    
+                    setAttachments(prev => [...prev, { type, url: result, name: file.name }]);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Audio Handling with Fallback
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+            const chunks: BlobPart[] = [];
+            
+            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                     setAttachments(prev => [...prev, { type: 'audio', url: reader.result as string, name: 'Áudio gravado' }]);
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(track => track.stop());
+            };
+            
+            recorder.start();
+            setMediaRecorder(recorder);
+            setIsRecording(true);
+            setIsSimulatingAudio(false);
+        } catch (err) {
+            console.warn("Audio recording error (likely permission or sandbox issue). Switching to simulation mode.", err);
+            // Fallback: Simulate recording state so UI doesn't break
+            setIsRecording(true);
+            setIsSimulatingAudio(true);
+        }
+    };
+
+    const stopRecording = () => {
+        if (isSimulatingAudio) {
+             setIsRecording(false);
+             setIsSimulatingAudio(false);
+             // Add a placeholder attachment for the simulation
+             setAttachments(prev => [...prev, { 
+                 type: 'audio', 
+                 url: '', 
+                 name: 'Áudio Simulado (Sem Microfone)' 
+             }]);
+        } else if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            setIsRecording(false);
+            setMediaRecorder(null);
+        }
+    };
+
 
     const getOtherParticipant = (convo: Conversation | null): User | undefined => {
         if (!convo) return undefined;
@@ -110,6 +213,18 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     const handleViewMyProfile = () => {
         setProfileUser(currentUser);
         setSocialView('profile');
+    };
+    
+    const renderAttachment = (att: Attachment) => {
+        if (att.type === 'image') return <img src={att.url} alt="attachment" className="max-w-xs rounded-lg mt-2 border border-white/10" />;
+        if (att.type === 'video') return <video src={att.url} controls className="max-w-xs rounded-lg mt-2 border border-white/10" />;
+        if (att.type === 'audio') {
+            if (!att.url) {
+                return <div className="text-xs text-amber-500 mt-2 p-2 border border-amber-500/30 rounded bg-amber-500/10 italic">⚠️ {att.name}</div>;
+            }
+            return <audio src={att.url} controls className="mt-2" />;
+        }
+        return <div className="text-blue-400 text-sm underline mt-2 bg-[#151725] p-2 rounded">{att.name || 'Arquivo'}</div>;
     };
 
     const renderMainContent = () => {
@@ -221,7 +336,9 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             return (
                 <div className="flex flex-col h-full bg-[#0B0C15] relative">
                     <header className="flex items-center justify-between p-4 border-b border-white/5 bg-[#151725]/80 backdrop-blur-md">
-                        <div className="flex items-center space-x-4 cursor-pointer" onClick={() => { setProfileUser(otherUser); setSocialView('profile'); }}>
+                        <div className="flex items-center space-x-4 cursor-pointer" onClick={() => { 
+                            if (showFeed) { setProfileUser(otherUser); setSocialView('profile'); }
+                        }}>
                             <div className="h-10 w-10 rounded-xl bg-slate-700 flex items-center justify-center text-white font-bold overflow-hidden">
                                 {otherUser.avatarUrl ? <img src={otherUser.avatarUrl} className="w-full h-full object-cover" alt="" /> : otherUser.name.charAt(0)}
                             </div>
@@ -239,17 +356,67 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         {activeConversation.messages.map(msg => (
                             <div key={msg.id} className={`flex items-end gap-3 ${msg.senderId === currentUser.id ? 'flex-row-reverse' : ''}`}>
                                 <div className={`p-4 rounded-2xl max-w-sm text-[15px] shadow-sm ${msg.senderId === currentUser.id ? 'bg-purple-600 text-white rounded-br-none' : 'bg-[#1e2130] border border-white/5 text-slate-200 rounded-bl-none'}`}>
-                                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                                    {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                    {msg.attachments && msg.attachments.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {msg.attachments.map((att, i) => <div key={i}>{renderAttachment(att)}</div>)}
+                                        </div>
+                                    )}
                                 </div>
                                 <span className="text-[9px] text-slate-600 pb-1">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             </div>
                         ))}
                         <div ref={endOfMessagesRef} />
                     </div>
+                    
+                    {/* Attachments Preview Area */}
+                    {attachments.length > 0 && (
+                        <div className="px-6 pt-4 bg-[#151725] border-t border-white/5 flex gap-3 overflow-x-auto">
+                            {attachments.map((att, i) => (
+                                <div key={i} className="relative group">
+                                    {att.type === 'image' || att.type === 'video' ? (
+                                        <div className="h-16 w-16 rounded-lg overflow-hidden border border-white/20">
+                                            {att.type === 'image' ? <img src={att.url} className="w-full h-full object-cover" alt="" /> : <video src={att.url} className="w-full h-full object-cover" />}
+                                        </div>
+                                    ) : (
+                                        <div className="h-16 w-16 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+                                            {att.type === 'audio' ? <MicIcon className="h-6 w-6 text-slate-400"/> : <PaperclipIcon className="h-6 w-6 text-slate-400" />}
+                                        </div>
+                                    )}
+                                    <button 
+                                        onClick={() => removeAttachment(i)}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {/* Input Area */}
                     <div className="p-5 bg-[#151725] border-t border-white/5">
                         <form onSubmit={handleSendMessage} className="flex items-center space-x-3 max-w-4xl mx-auto">
+                            <button 
+                                type="button" 
+                                onClick={() => fileInputRef.current?.click()} 
+                                className="p-2 text-slate-400 hover:text-purple-400 hover:bg-white/5 rounded-full transition-colors"
+                            >
+                                <PaperclipIcon className="h-5 w-5" />
+                            </button>
+                            <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelect} />
+                            
+                            <button 
+                                type="button" 
+                                onClick={isRecording ? stopRecording : startRecording} 
+                                className={`p-2 rounded-full transition-colors ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:text-purple-400 hover:bg-white/5'}`}
+                            >
+                                {isRecording ? <StopIcon className="h-5 w-5" /> : <MicIcon className="h-5 w-5" />}
+                            </button>
+
                             <input type="text" value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder={`Mensagem para ${otherUser.name}...`} className="flex-1 bg-[#0B0C15] border border-white/10 rounded-full px-6 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors" />
-                            <button type="submit" disabled={!messageText.trim()} className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full p-3.5 transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)]"><SendIcon className="h-5 w-5" /></button>
+                            
+                            <button type="submit" disabled={!messageText.trim() && attachments.length === 0} className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full p-3.5 transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)]"><SendIcon className="h-5 w-5" /></button>
                         </form>
                     </div>
                 </div>
@@ -261,8 +428,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                 <div className="bg-[#151725]/50 p-8 rounded-full mb-6 border border-white/5 shadow-2xl">
                      <MessageSquareIcon className="h-16 w-16 text-slate-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Social Hub</h2>
-                <p className="max-w-xs text-center text-sm font-light">Selecione uma conversa ao lado ou navegue pelo feed para interagir com a equipe.</p>
+                <h2 className="text-2xl font-bold text-white mb-2">{showFeed ? 'Social Hub' : 'Chat da Equipe'}</h2>
+                <p className="max-w-xs text-center text-sm font-light">Selecione um membro ao lado para iniciar uma conversa.</p>
             </div>
         );
     };
@@ -270,41 +437,52 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     const isProfileView = socialView === 'profile';
 
     return (
-        <div className={`h-full grid ${isProfileView ? 'grid-cols-[280px_1fr]' : 'grid-cols-[280px_1fr_340px]'} text-white`}>
+        <div className={`h-full grid ${isProfileView || !showFeed ? 'grid-cols-[280px_1fr]' : 'grid-cols-[280px_1fr_340px]'} text-white`}>
             {/* Left Column: Navigation & Members */}
             <aside className="bg-[#0B0C15]/90 backdrop-blur-xl border-r border-white/5 flex flex-col pt-8 z-10 shadow-[5px_0_30px_rgba(0,0,0,0.2)]">
                 <div className="px-6 mb-8">
                     <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">Social</h2>
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Team Interaction</p>
                 </div>
-                <nav className="space-y-2 px-4 mb-8">
-                    <button onClick={() => setSocialView('feed')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'feed' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
-                        <HomeIcon className="h-5 w-5"/><span>Feed de Notícias</span>
-                    </button>
-                    <button onClick={() => setSocialView('chat')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'chat' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
-                        <MessageSquareIcon className="h-5 w-5"/><span>Mensagens Diretas</span>
-                    </button>
-                    <button onClick={handleViewMyProfile} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'profile' && profileUser.id === currentUser.id ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
-                        <UserIcon className="h-5 w-5"/><span>Meu Perfil</span>
-                    </button>
-                </nav>
+                
+                {showFeed && (
+                    <nav className="space-y-2 px-4 mb-8">
+                        <button onClick={() => setSocialView('feed')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'feed' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
+                            <HomeIcon className="h-5 w-5"/><span>Feed de Notícias</span>
+                        </button>
+                        <button onClick={() => setSocialView('chat')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'chat' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
+                            <MessageSquareIcon className="h-5 w-5"/><span>Mensagens Diretas</span>
+                        </button>
+                        <button onClick={handleViewMyProfile} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'profile' && profileUser.id === currentUser.id ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
+                            <UserIcon className="h-5 w-5"/><span>Meu Perfil</span>
+                        </button>
+                    </nav>
+                )}
+
                 <div className="flex-1 overflow-y-auto px-4">
-                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Conversas</h3>
-                    <ul className="space-y-1">
-                        {members.filter(m => m.id !== currentUser.id).map(member => (
-                            <li key={member.id}>
-                                <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && getOtherParticipant(activeConversation)?.id === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-                                    <div className="relative mr-3">
-                                        <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
-                                            {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
+                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Equipe</h3>
+                    {teamMembers.length > 0 ? (
+                        <ul className="space-y-1">
+                            {teamMembers.map(member => (
+                                <li key={member.id}>
+                                    <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && getOtherParticipant(activeConversation)?.id === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                                        <div className="relative mr-3">
+                                            <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
+                                                {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
+                                            </div>
+                                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
-                                    </div>
-                                    <span className={`text-sm font-medium ${socialView === 'chat' && getOtherParticipant(activeConversation)?.id === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                                        <div className="flex flex-col">
+                                            <span className={`text-sm font-medium ${socialView === 'chat' && getOtherParticipant(activeConversation)?.id === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
+                                            <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
+                                        </div>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-xs text-slate-600 italic px-2">Você ainda não está em nenhuma equipe com outros membros.</p>
+                    )}
                 </div>
             </aside>
 
@@ -315,8 +493,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                 {renderMainContent()}
             </main>
 
-            {/* Right Column: News (Only if not profile view) */}
-            {!isProfileView && (
+            {/* Right Column: News (Only if not profile view AND Feed is enabled) */}
+            {!isProfileView && showFeed && (
                 <aside className="bg-[#0B0C15]/90 backdrop-blur-xl border-l border-white/5 p-6 overflow-y-auto z-10 shadow-[-5px_0_30px_rgba(0,0,0,0.2)]">
                     <div className="flex items-center space-x-2 mb-8 bg-amber-500/5 p-3 rounded-xl border border-amber-500/10">
                         <SparklesIcon className="h-5 w-5 text-amber-400" />

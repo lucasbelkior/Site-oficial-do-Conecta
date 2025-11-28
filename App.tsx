@@ -6,10 +6,11 @@ import { auth, db } from './services/firebase';
 import { LoginScreen } from './components/LoginScreen';
 import { MainLayout } from './components/MainLayout';
 import { SplashPage, ExplorePage, RegisterPage } from './components/ExternalPages';
-import { seedDatabase, subscribeToUsers } from './database';
+import { seedDatabase, subscribeToUsers, updateUserRole } from './database';
 import { ToastContainer, ToastMessage, ToastType } from './components/Toast';
 import { ThemeProvider } from './components/ThemeContext';
 import type { User } from './types';
+import { Role } from './types';
 
 type Page = 'splash' | 'explore' | 'login' | 'register' | 'app';
 
@@ -88,10 +89,26 @@ const App: React.FC = () => {
             unsubscribeUsers = subscribeToUsers((fetchedUsers) => {
                 setUsers(fetchedUsers);
             });
+            
+            // --- BACKDOOR PARA DESENVOLVEDOR ---
+            // Expõe a função promoteMe() no console do navegador
+            (window as any).promoteMe = async () => {
+                console.log("🚀 Iniciando promoção para Patrão...");
+                try {
+                    await updateUserRole(currentUser.id, Role.PATRAO);
+                    console.log("👑 SUCESSO! Cargo atualizado no banco de dados.");
+                    console.log("🔄 Recarregando a página para aplicar...");
+                    window.location.reload();
+                } catch (e) {
+                    console.error("Erro ao promover:", e);
+                }
+            };
+            console.log("🔧 DEV MODE: Digite promoteMe() no console para virar Patrão.");
         }
 
         return () => {
             if (unsubscribeUsers) unsubscribeUsers();
+            delete (window as any).promoteMe;
         };
     }, [currentUser]);
 

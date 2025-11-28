@@ -13,7 +13,7 @@ import {
     setDoc,
     where
 } from 'firebase/firestore';
-import { User, Task, Channel, Role, TaskStatus, ChannelMessage, Team } from './types';
+import { User, Task, Channel, Role, TaskStatus, ChannelMessage, Team, GlobalReminder } from './types';
 
 // --- Default Data for Seeding (Used only if DB is empty) ---
 export const defaultUsers: User[] = [
@@ -157,6 +157,14 @@ export const subscribeToChannelMessages = (callback: (messages: ChannelMessage[]
     });
 };
 
+export const subscribeToReminders = (callback: (reminders: GlobalReminder[]) => void) => {
+    const q = query(collection(db, 'global_reminders'));
+    return onSnapshot(q, (snapshot) => {
+        const reminders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalReminder));
+        callback(reminders);
+    });
+};
+
 // --- Write Operations ---
 
 export const addTaskToFirestore = async (task: Task) => {
@@ -208,6 +216,14 @@ export const joinTeamInFirestore = async (teamId: string, userId: string, curren
         const teamRef = doc(db, 'teams', teamId);
         await updateDoc(teamRef, { members: [...currentMembers, userId] });
     }
+};
+
+export const addReminderToFirestore = async (reminder: Omit<GlobalReminder, 'id'>) => {
+    await addDoc(collection(db, 'global_reminders'), reminder);
+};
+
+export const deleteReminderFromFirestore = async (id: string) => {
+    await deleteDoc(doc(db, 'global_reminders', id));
 };
 
 // Exports for compatibility with existing imports (though they will be replaced by real data flow)
