@@ -96,9 +96,10 @@ export interface GeminiResponse {
 export interface SocialMessage {
   id: string;
   senderId: string;
+  receiverId: string; // Added to sync chats
   text: string;
   timestamp: string;
-  attachments?: Attachment[]; // New: Attachments
+  attachments?: Attachment[];
 }
 
 export interface Conversation {

@@ -13,21 +13,31 @@ import {
     setDoc,
     where
 } from 'firebase/firestore';
-import { User, Task, Channel, Role, TaskStatus, ChannelMessage, Team, GlobalReminder } from './types';
+import { User, Task, Channel, Role, TaskStatus, ChannelMessage, Team, GlobalReminder, SocialMessage } from './types';
+
+// --- Helper to clean undefined values ---
+const cleanData = (data: any) => {
+    return Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+            acc[key] = value;
+        }
+        return acc;
+    }, {} as any);
+};
 
 // --- Default Data for Seeding (Used only if DB is empty) ---
 export const defaultUsers: User[] = [
     { 
         id: 'u1', 
-        name: 'Ana', 
-        email: 'ana@conecta.com', 
+        name: 'Katarina', // Alterado de Ana para Katarina
+        email: 'katarina@conecta.com', 
         role: Role.PATRAO, 
         points: 0,
         jobTitle: 'CEO & Founder',
-        bio: 'Liderando a inovação na Conecta. Apaixonada por tecnologia e gestão de pessoas.',
+        bio: 'Visionária e líder. Transformando a comunicação corporativa.',
         location: 'São Paulo, SP',
-        followers: 1250,
-        following: 300,
+        followers: 1500,
+        following: 200,
         avatarUrl: '',
         coverUrl: '' 
     },
@@ -165,18 +175,27 @@ export const subscribeToReminders = (callback: (reminders: GlobalReminder[]) => 
     });
 };
 
+export const subscribeToDirectMessages = (callback: (messages: SocialMessage[]) => void) => {
+    const q = query(collection(db, 'direct_messages'), orderBy('timestamp', 'asc'));
+    return onSnapshot(q, (snapshot) => {
+        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SocialMessage));
+        callback(messages);
+    });
+};
+
 // --- Write Operations ---
 
 export const addTaskToFirestore = async (task: Task) => {
     // Remove the 'id' if you want Firestore to generate it, or keep it for legacy compatibility
     const { id, ...taskData } = task; 
     // We store the numeric ID for compatibility with existing components
-    await addDoc(collection(db, 'tasks'), { ...taskData, id: Date.now() }); 
+    // Clean data to remove undefined values
+    await addDoc(collection(db, 'tasks'), { ...cleanData(taskData), id: Date.now() }); 
 };
 
 export const updateTaskInFirestore = async (firestoreId: string, data: Partial<Task>) => {
     const taskRef = doc(db, 'tasks', firestoreId);
-    await updateDoc(taskRef, data);
+    await updateDoc(taskRef, cleanData(data));
 };
 
 export const deleteTaskFromFirestore = async (firestoreId: string) => {
@@ -185,7 +204,11 @@ export const deleteTaskFromFirestore = async (firestoreId: string) => {
 };
 
 export const addMessageToFirestore = async (message: ChannelMessage) => {
-    await addDoc(collection(db, 'channel_messages'), message);
+    await addDoc(collection(db, 'channel_messages'), cleanData(message));
+};
+
+export const addDirectMessageToFirestore = async (message: SocialMessage) => {
+    await addDoc(collection(db, 'direct_messages'), cleanData(message));
 };
 
 export const updateUserPoints = async (userId: string, newPoints: number) => {
@@ -195,7 +218,7 @@ export const updateUserPoints = async (userId: string, newPoints: number) => {
 
 export const updateUserProfile = async (userId: string, data: Partial<User>) => {
     const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, data);
+    await updateDoc(userRef, cleanData(data));
 };
 
 export const updateUserRole = async (userId: string, newRole: Role) => {
@@ -204,11 +227,11 @@ export const updateUserRole = async (userId: string, newRole: Role) => {
 };
 
 export const addTeamToFirestore = async (team: Omit<Team, 'id'>) => {
-    await addDoc(collection(db, 'teams'), team);
+    await addDoc(collection(db, 'teams'), cleanData(team));
 };
 
 export const addChannelToFirestore = async (channel: Omit<Channel, 'id'>) => {
-    await addDoc(collection(db, 'channels'), channel);
+    await addDoc(collection(db, 'channels'), cleanData(channel));
 };
 
 export const joinTeamInFirestore = async (teamId: string, userId: string, currentMembers: string[]) => {
@@ -219,14 +242,14 @@ export const joinTeamInFirestore = async (teamId: string, userId: string, curren
 };
 
 export const addReminderToFirestore = async (reminder: Omit<GlobalReminder, 'id'>) => {
-    await addDoc(collection(db, 'global_reminders'), reminder);
+    await addDoc(collection(db, 'global_reminders'), cleanData(reminder));
 };
 
 export const deleteReminderFromFirestore = async (id: string) => {
     await deleteDoc(doc(db, 'global_reminders', id));
 };
 
-// Exports for compatibility with existing imports (though they will be replaced by real data flow)
+// Exports for compatibility
 export const initialUsers = defaultUsers; 
 export const initialChannels = defaultChannels;
 export const initialTasks = defaultTasks;

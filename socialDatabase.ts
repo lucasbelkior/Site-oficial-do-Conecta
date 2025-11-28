@@ -5,22 +5,22 @@ export const initialConversations: Conversation[] = [
     {
         participantIds: ['u2', 'u3'], // Carlos and Luana
         messages: [
-            { id: 'm1', senderId: 'u2', text: 'E aí Luana, tudo certo com o relatório?', timestamp: '2024-07-30T10:00:00Z' },
-            { id: 'm2', senderId: 'u3', text: 'Opa, Carlos! Tudo sim, quase finalizando. Preciso só de mais uma informação do time de marketing.', timestamp: '2024-07-30T10:01:00Z' },
-            { id: 'm3', senderId: 'u2', text: 'Beleza, se precisar de ajuda é só chamar!', timestamp: '2024-07-30T10:02:00Z' },
+            { id: 'm1', senderId: 'u2', receiverId: 'u3', text: 'E aí Luana, tudo certo com o relatório?', timestamp: '2024-07-30T10:00:00Z' },
+            { id: 'm2', senderId: 'u3', receiverId: 'u2', text: 'Opa, Carlos! Tudo sim, quase finalizando. Preciso só de mais uma informação do time de marketing.', timestamp: '2024-07-30T10:01:00Z' },
+            { id: 'm3', senderId: 'u2', receiverId: 'u3', text: 'Beleza, se precisar de ajuda é só chamar!', timestamp: '2024-07-30T10:02:00Z' },
         ],
     },
     {
         participantIds: ['u2', 'u4'], // Carlos and Mari
         messages: [
-            { id: 'm4', senderId: 'u4', text: 'Carlos, você viu o novo briefing do cliente X?', timestamp: '2024-07-29T14:30:00Z' },
+            { id: 'm4', senderId: 'u4', receiverId: 'u2', text: 'Carlos, você viu o novo briefing do cliente X?', timestamp: '2024-07-29T14:30:00Z' },
         ],
     },
      {
         participantIds: ['u3', 'u4'], // Luana and Mari
         messages: [
-            { id: 'm5', senderId: 'u3', text: 'Vamos almoçar juntas hoje?', timestamp: '2024-07-30T11:30:00Z' },
-            { id: 'm6', senderId: 'u4', text: 'Vamos! Mesmo lugar de sempre?', timestamp: '2024-07-30T11:31:00Z' },
+            { id: 'm5', senderId: 'u3', receiverId: 'u4', text: 'Vamos almoçar juntas hoje?', timestamp: '2024-07-30T11:30:00Z' },
+            { id: 'm6', senderId: 'u4', receiverId: 'u3', text: 'Vamos! Mesmo lugar de sempre?', timestamp: '2024-07-30T11:31:00Z' },
         ],
     },
 ];

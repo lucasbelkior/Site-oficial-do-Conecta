@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type { User, Conversation, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
 import { Role } from '../types';
-import { initialConversations } from '../socialDatabase';
 import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon } from './Icons';
 import { CallModal } from './CallModal';
 import { UserProfile } from './UserProfile';
@@ -13,18 +12,18 @@ interface SocialPanelProps {
     posts: Post[];
     techNews: TechNewsItem[];
     isLoadingNews: boolean;
-    teams: Team[]; // Added teams prop to filter contacts
+    teams: Team[]; 
     onCreatePost: (text: string) => void;
-    showFeed?: boolean; // New prop to toggle feed visibility
+    showFeed?: boolean; 
+    directMessages: SocialMessage[]; // New prop
+    onSendDirectMessage: (text: string, receiverId: string, attachments?: Attachment[]) => void; // New prop
 }
 
 const MAX_POST_LENGTH = 280;
 
-export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, teams, onCreatePost, showFeed = true }) => {
-    // Default to 'chat' if feed is hidden
+export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, teams, onCreatePost, showFeed = true, directMessages, onSendDirectMessage }) => {
     const [socialView, setSocialView] = useState<'feed' | 'chat' | 'profile'>(showFeed ? 'feed' : 'chat');
-    const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-    const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+    const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
     const [messageText, setMessageText] = useState('');
     const [postText, setPostText] = useState('');
     const [callState, setCallState] = useState<{ active: boolean; type: 'audio' | 'video' | null; target: User | null }>({ active: false, type: null, target: null });
@@ -35,28 +34,21 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
     const [isSimulatingAudio, setIsSimulatingAudio] = useState(false);
     
-    // Determine which user profile to show. For now, 'profile' view is My Profile.
     const [profileUser, setProfileUser] = useState<User>(currentUser);
 
     const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Filter logic: Show only users who share a team with the current user
     const teamMembers = useMemo(() => {
-        // If I am the boss (Role.PATRAO), show everyone who is a member of my created teams OR all members if I haven't created specific teams yet?
-        // Let's stick to the shared team logic, but ensure the boss is considered "in" the teams they own.
-        // Or simpler: If boss, just show all users for now to ensure they can chat.
         if (currentUser.role === Role.PATRAO) {
              return allUsers.filter(u => u.id !== currentUser.id);
         }
-
         const myTeamIds = teams
             .filter(t => t.members.includes(currentUser.id))
             .map(t => t.id);
             
         return allUsers.filter(u => {
-            if (u.id === currentUser.id) return false; // Don't show self in list
-            // Check if user is in any of my teams
+            if (u.id === currentUser.id) return false; 
             const userTeams = teams.filter(t => t.members.includes(u.id));
             return userTeams.some(t => myTeamIds.includes(t.id));
         });
@@ -64,7 +56,15 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     const userMap = useMemo(() => new Map(allUsers.map(user => [user.id, user])), [allUsers]);
 
-    // Keep profileUser synced with currentUser updates from App state
+    // Derive active conversation messages from directMessages prop
+    const activeMessages = useMemo(() => {
+        if (!activeConversationUserId) return [];
+        return directMessages.filter(msg => 
+            (msg.senderId === currentUser.id && msg.receiverId === activeConversationUserId) ||
+            (msg.senderId === activeConversationUserId && msg.receiverId === currentUser.id)
+        );
+    }, [directMessages, activeConversationUserId, currentUser.id]);
+
     useEffect(() => {
         if (profileUser.id === currentUser.id) {
             const updated = allUsers.find(u => u.id === currentUser.id);
@@ -74,44 +74,19 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     useEffect(() => {
         endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [activeConversation?.messages, attachments]);
-
-    const findOrCreateConversation = (participantId: string): Conversation => {
-        const existing = conversations.find(c => 
-            c.participantIds.includes(currentUser.id) && c.participantIds.includes(participantId)
-        );
-        if (existing) return existing;
-        
-        const newConversation: Conversation = {
-            participantIds: [currentUser.id, participantId],
-            messages: [],
-        };
-        setConversations(prev => [...prev, newConversation]);
-        return newConversation;
-    };
+    }, [activeMessages, attachments]);
 
     const handleMemberSelect = (member: User) => {
-        const conversation = findOrCreateConversation(member.id);
-        setActiveConversation(conversation);
+        setActiveConversationUserId(member.id);
         setSocialView('chat');
-        setAttachments([]); // clear attachments on switch
+        setAttachments([]); 
     };
 
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if ((!messageText.trim() && attachments.length === 0) || !activeConversation) return;
+        if ((!messageText.trim() && attachments.length === 0) || !activeConversationUserId) return;
 
-        const newMessage: SocialMessage = {
-            id: `msg-${Date.now()}`,
-            senderId: currentUser.id,
-            text: messageText,
-            timestamp: new Date().toISOString(),
-            attachments: attachments.length > 0 ? attachments : undefined
-        };
-
-        const updatedConversation = { ...activeConversation, messages: [...activeConversation.messages, newMessage] };
-        setConversations(prev => prev.map(c => c.participantIds.sort().join(',') === updatedConversation.participantIds.sort().join(',') ? updatedConversation : c));
-        setActiveConversation(updatedConversation);
+        onSendDirectMessage(messageText, activeConversationUserId, attachments.length > 0 ? attachments : undefined);
         setMessageText('');
         setAttachments([]);
     };
@@ -122,7 +97,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         setPostText('');
     };
 
-    // File Handling
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
          if (e.target.files) {
             Array.from(e.target.files).forEach(file => {
@@ -145,7 +119,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         setAttachments(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Audio Handling with Fallback
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -169,7 +142,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             setIsSimulatingAudio(false);
         } catch (err) {
             console.warn("Audio recording error (likely permission or sandbox issue). Switching to simulation mode.", err);
-            // Fallback: Simulate recording state so UI doesn't break
             setIsRecording(true);
             setIsSimulatingAudio(true);
         }
@@ -179,7 +151,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         if (isSimulatingAudio) {
              setIsRecording(false);
              setIsSimulatingAudio(false);
-             // Add a placeholder attachment for the simulation
              setAttachments(prev => [...prev, { 
                  type: 'audio', 
                  url: '', 
@@ -192,15 +163,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         }
     };
 
-
-    const getOtherParticipant = (convo: Conversation | null): User | undefined => {
-        if (!convo) return undefined;
-        const otherId = convo.participantIds.find(id => id !== currentUser.id);
-        return userMap.get(otherId || '');
-    };
-
     const handleInitiateCall = (type: 'audio' | 'video') => {
-        const target = getOtherParticipant(activeConversation);
+        const target = activeConversationUserId ? userMap.get(activeConversationUserId) : null;
         if (target) {
             setCallState({ active: true, type, target });
         }
@@ -246,7 +210,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                     </header>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="p-6 max-w-2xl mx-auto w-full">
-                            {/* Create Post Card */}
                             <div className="bg-[#151725]/60 backdrop-blur-md border border-white/5 rounded-[1.5rem] p-5 mb-8 shadow-lg hover:border-white/10 transition-colors">
                                 <div className="flex space-x-4">
                                     <div className="flex-shrink-0 h-11 w-11 rounded-2xl bg-slate-700/50 flex items-center justify-center border border-white/5 overflow-hidden">
@@ -277,8 +240,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Feed List */}
                             <ul className="space-y-6">
                                 {posts.map(post => {
                                     const author = userMap.get(post.authorId);
@@ -308,7 +269,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                                                         <span className="text-slate-600 text-[10px] uppercase font-bold tracking-wider">• {new Date(post.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
                                                     <p className="text-slate-200 whitespace-pre-wrap text-[15px] leading-relaxed font-light">{post.text}</p>
-                                                    
                                                     <div className="flex items-center space-x-6 mt-5 pt-4 border-t border-white/5 text-slate-500">
                                                         <button className="flex items-center space-x-2 text-xs hover:text-pink-500 transition-colors group">
                                                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
@@ -331,8 +291,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             );
         }
 
-        const otherUser = getOtherParticipant(activeConversation);
-        if (socialView === 'chat' && activeConversation && otherUser) {
+        const otherUser = activeConversationUserId ? userMap.get(activeConversationUserId) : undefined;
+        if (socialView === 'chat' && otherUser) {
             return (
                 <div className="flex flex-col h-full bg-[#0B0C15] relative">
                     <header className="flex items-center justify-between p-4 border-b border-white/5 bg-[#151725]/80 backdrop-blur-md">
@@ -353,7 +313,12 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         </div>
                     </header>
                     <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-gradient-to-b from-[#0B0C15] to-[#11131f]">
-                        {activeConversation.messages.map(msg => (
+                        {activeMessages.length === 0 && (
+                            <div className="text-center py-10 opacity-50">
+                                <p className="text-sm text-slate-500">Nenhuma mensagem ainda.</p>
+                            </div>
+                        )}
+                        {activeMessages.map(msg => (
                             <div key={msg.id} className={`flex items-end gap-3 ${msg.senderId === currentUser.id ? 'flex-row-reverse' : ''}`}>
                                 <div className={`p-4 rounded-2xl max-w-sm text-[15px] shadow-sm ${msg.senderId === currentUser.id ? 'bg-purple-600 text-white rounded-br-none' : 'bg-[#1e2130] border border-white/5 text-slate-200 rounded-bl-none'}`}>
                                     {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
@@ -369,7 +334,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <div ref={endOfMessagesRef} />
                     </div>
                     
-                    {/* Attachments Preview Area */}
                     {attachments.length > 0 && (
                         <div className="px-6 pt-4 bg-[#151725] border-t border-white/5 flex gap-3 overflow-x-auto">
                             {attachments.map((att, i) => (
@@ -394,7 +358,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         </div>
                     )}
                     
-                    {/* Input Area */}
                     <div className="p-5 bg-[#151725] border-t border-white/5">
                         <form onSubmit={handleSendMessage} className="flex items-center space-x-3 max-w-4xl mx-auto">
                             <button 
@@ -465,7 +428,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <ul className="space-y-1">
                             {teamMembers.map(member => (
                                 <li key={member.id}>
-                                    <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && getOtherParticipant(activeConversation)?.id === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                                    <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && activeConversationUserId === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
                                         <div className="relative mr-3">
                                             <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
                                                 {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
@@ -473,7 +436,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                                             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className={`text-sm font-medium ${socialView === 'chat' && getOtherParticipant(activeConversation)?.id === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
+                                            <span className={`text-sm font-medium ${socialView === 'chat' && activeConversationUserId === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
                                             <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
                                         </div>
                                     </button>
