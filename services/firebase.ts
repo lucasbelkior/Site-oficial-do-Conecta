@@ -1,7 +1,11 @@
 
-import * as firebaseApp from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import * as firebaseApp from "firebase/app";
+
+// Workaround for TypeScript error: Module '"firebase/app"' has no exported member ...
+// This ensures we can access the named exports even if type definitions are resolving incorrectly.
+const { initializeApp, getApps, getApp } = firebaseApp as any;
 
 const firebaseConfig = {
     apiKey: "AIzaSyAR4TNdSL8Od45mKpsYtYgf3naSEjdMjLE",
@@ -13,14 +17,8 @@ const firebaseConfig = {
     measurementId: "G-CF2F5P81E2"
 };
 
-// Initialize Firebase only if it hasn't been initialized yet
-// Using modular SDK: check getApps() length
-// We use 'as any' to bypass TypeScript errors where definitions might claim 'initializeApp' doesn't exist
-const appModule = firebaseApp as any;
-
-const app = appModule.getApps && appModule.getApps().length > 0 
-    ? appModule.getApp() 
-    : appModule.initializeApp(firebaseConfig);
+// Initialize Firebase using standard pattern compatible with Vite/Webpack
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
