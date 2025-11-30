@@ -32,39 +32,33 @@ interface PageProps {
 // ==========================================
 export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
     const [introFinished, setIntroFinished] = useState(false);
-    // Start visible immediately if video fails, otherwise fade in
-    const [showContent, setShowContent] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const finishIntro = () => {
         setIntroFinished(true);
-        setShowContent(true);
     };
 
     useEffect(() => {
-        // Attempt to play
+        // Attempt to play intro video
         const playVideo = async () => {
             if (videoRef.current) {
                 try {
                     await videoRef.current.play();
                 } catch (err) {
-                    console.warn("Autoplay prevented. Showing content immediately.");
+                    console.warn("Autoplay blocked, skipping intro.");
                     finishIntro();
                 }
             }
         };
 
-        playVideo();
-
-        // Failsafe: If nothing happens in 4 seconds, show content anyway
-        const timer = setTimeout(() => {
-            if (!introFinished) {
-                console.log("Failsafe timer triggered");
-                finishIntro();
-            }
-        }, 4000);
-
-        return () => clearTimeout(timer);
+        if (!introFinished) {
+            playVideo();
+             // Safety Timer: Force finish after 5s if video stalls
+            const timer = setTimeout(() => {
+                if (!introFinished) finishIntro();
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
     }, [introFinished]);
 
     const styles = `
@@ -93,20 +87,19 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 50; /* Lower z-index so controls might work if needed, but high enough to cover bg */
-      transition: opacity 0.8s ease, visibility 0.8s;
+      z-index: 50;
     }
     .splash-content {
       position: relative;
-      z-index: 60; /* Higher than vinheta */
+      z-index: 60;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
       opacity: 0;
-      transition: opacity 1s ease;
-      pointer-events: none;
+      transition: opacity 1.5s ease;
+      pointer-events: none; /* Prevent clicks when invisible */
     }
     .splash-content.visible {
       opacity: 1;
@@ -145,16 +138,21 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
     }
     .skip-btn {
         position: absolute;
-        bottom: 20px;
-        right: 20px;
+        bottom: 30px;
+        right: 30px;
         z-index: 100;
-        color: white;
-        background: rgba(255,255,255,0.1);
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 0.8rem;
+        color: rgba(255,255,255,0.6);
+        background: rgba(0,0,0,0.3);
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-size: 0.9rem;
         cursor: pointer;
-        border: 1px solid rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.2s;
+    }
+    .skip-btn:hover {
+        background: rgba(255,255,255,0.1);
+        color: white;
     }
     `;
 
@@ -162,7 +160,7 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
         <div className="external-page">
             <style>{COMMON_STYLES}{styles}</style>
             
-            {/* Background Loop */}
+            {/* Background Loop (Always Visible) */}
             <div id="fundo-animado">
                 <video 
                     src="https://cdn.pixabay.com/video/2019/05/16/23645-336369040_large.mp4" 
@@ -173,7 +171,7 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
                 />
             </div>
 
-            {/* Intro Video Layer */}
+            {/* Intro Video Layer (Removed from DOM when finished) */}
             {!introFinished && (
                 <div id="vinheta">
                     <video 
@@ -189,16 +187,14 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
                 </div>
             )}
 
-            {/* Main Content Layer */}
-            <div className={`splash-content ${showContent ? 'visible' : ''}`}>
+            {/* Main Content Layer (Fades in when intro finishes) */}
+            <div className={`splash-content ${introFinished ? 'visible' : ''}`}>
                 <header className="mb-8">
                     <div 
                         className="logo-container" 
                         style={{ width: '380px' }} 
-                        onClick={() => {
-                            // Easter egg or reload
-                            window.location.reload();
-                        }}
+                        onClick={() => { window.location.reload(); }}
+                        title="Reload"
                     >
                          <img 
                             src="https://i.imgur.com/syClG5w.png" 
