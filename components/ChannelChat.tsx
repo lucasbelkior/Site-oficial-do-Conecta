@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { Channel, ChannelMessage, User, Attachment } from '../types';
 import { HashtagIcon, SendIcon, PaperclipIcon } from './Icons';
@@ -32,7 +31,7 @@ export const ChannelChat: React.FC<ChannelChatProps> = ({ channel, messages, cur
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            Array.from(e.target.files).forEach(file => {
+            Array.from(e.target.files).forEach((file: File) => {
                 const reader = new FileReader();
                 reader.onload = () => {
                     const result = reader.result as string;

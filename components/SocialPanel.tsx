@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type { User, Conversation, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
 import { Role } from '../types';
@@ -99,7 +98,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
          if (e.target.files) {
-            Array.from(e.target.files).forEach(file => {
+            Array.from(e.target.files).forEach((file: File) => {
                 const reader = new FileReader();
                 reader.onload = () => {
                     const result = reader.result as string;
