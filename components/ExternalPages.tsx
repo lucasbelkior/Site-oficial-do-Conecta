@@ -43,9 +43,10 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
         const playVideo = async () => {
             if (videoRef.current) {
                 try {
+                    // Tenta tocar. Se o navegador bloquear, cai no catch
                     await videoRef.current.play();
                 } catch (err) {
-                    console.warn("Autoplay blocked, skipping intro.");
+                    console.warn("Autoplay blocked, skipping intro.", err);
                     finishIntro();
                 }
             }
@@ -53,10 +54,13 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
 
         if (!introFinished) {
             playVideo();
-             // Safety Timer: Force finish after 5s if video stalls
+             // Safety Timer: Force finish after 4s if video stalls or fails to load
             const timer = setTimeout(() => {
-                if (!introFinished) finishIntro();
-            }, 5000);
+                if (!introFinished) {
+                    console.log("Intro timed out, forcing finish.");
+                    finishIntro();
+                }
+            }, 4000);
             return () => clearTimeout(timer);
         }
     }, [introFinished]);
@@ -88,6 +92,7 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       justify-content: center;
       align-items: center;
       z-index: 50;
+      cursor: pointer; /* Indica que pode clicar para pular */
     }
     .splash-content {
       position: relative;
@@ -141,17 +146,18 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
         bottom: 30px;
         right: 30px;
         z-index: 100;
-        color: rgba(255,255,255,0.6);
-        background: rgba(0,0,0,0.3);
+        color: rgba(255,255,255,0.8);
+        background: rgba(0,0,0,0.5);
         padding: 8px 20px;
         border-radius: 30px;
         font-size: 0.9rem;
         cursor: pointer;
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
         transition: all 0.2s;
+        pointer-events: auto;
     }
     .skip-btn:hover {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.2);
         color: white;
     }
     `;
@@ -173,17 +179,23 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
 
             {/* Intro Video Layer (Removed from DOM when finished) */}
             {!introFinished && (
-                <div id="vinheta">
+                <div id="vinheta" onClick={finishIntro} title="Clique para pular">
                     <video 
                         ref={videoRef}
                         src="https://i.imgur.com/Nig6dt1.mp4" 
                         muted 
                         playsInline
                         onEnded={finishIntro}
-                        onError={finishIntro}
+                        onError={(e) => {
+                            console.error("Erro no video da vinheta", e);
+                            finishIntro();
+                        }}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                    <button className="skip-btn" onClick={finishIntro}>Pular Intro</button>
+                    <button className="skip-btn" onClick={(e) => {
+                        e.stopPropagation();
+                        finishIntro();
+                    }}>Pular Intro</button>
                 </div>
             )}
 
