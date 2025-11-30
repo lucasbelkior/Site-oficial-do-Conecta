@@ -98,7 +98,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
         <div className="h-full overflow-y-auto custom-scrollbar bg-[#0B0C15]">
             
             {/* --- Banner Section --- */}
-            <div className="relative h-48 md:h-64 w-full group">
+            <div className="relative h-40 md:h-64 w-full group">
                 {coverUrl ? (
                     <img src={coverUrl} alt="Cover" className="w-full h-full object-cover transition-opacity duration-300" />
                 ) : (
@@ -127,16 +127,16 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
             </div>
 
             {/* --- Profile Header Info --- */}
-            <div className="px-6 md:px-10 relative mb-6">
-                <div className="flex flex-col md:flex-row items-start md:items-end -mt-16 md:-mt-12 mb-4 gap-6">
+            <div className="px-4 md:px-10 relative mb-6">
+                <div className="flex flex-col md:flex-row items-start md:items-end -mt-12 md:-mt-12 mb-4 gap-4 md:gap-6">
                     
                     {/* Avatar */}
-                    <div className="relative group z-20">
-                        <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-[#0B0C15] shadow-2xl overflow-hidden bg-[#151725] flex items-center justify-center relative">
+                    <div className="relative group z-20 self-start md:self-auto ml-2 md:ml-0">
+                        <div className="h-28 w-28 md:h-40 md:w-40 rounded-full border-4 border-[#0B0C15] shadow-2xl overflow-hidden bg-[#151725] flex items-center justify-center relative">
                             {avatarUrl ? (
                                 <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
                             ) : (
-                                <UserIcon className="h-16 w-16 text-slate-600" />
+                                <UserIcon className="h-14 w-14 md:h-16 md:w-16 text-slate-600" />
                             )}
                             
                             {/* Visual indicator for editing Avatar */}
@@ -147,7 +147,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
                                 >
                                     <div className="text-white flex flex-col items-center gap-1 pointer-events-none">
                                         <div className="bg-cyan-600 p-2 rounded-full">
-                                            <EditIcon className="h-5 w-5 text-white" />
+                                            <EditIcon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                                         </div>
                                         <span className="text-[10px] font-bold">Alterar</span>
                                     </div>
@@ -162,11 +162,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
                             )}
                         </div>
                         {/* Online Indicator */}
-                        <div className="absolute bottom-4 right-2 w-6 h-6 bg-green-500 border-4 border-[#0B0C15] rounded-full pointer-events-none" title="Online"></div>
+                        <div className="absolute bottom-2 right-2 md:bottom-4 md:right-2 w-5 h-5 md:w-6 md:h-6 bg-green-500 border-4 border-[#0B0C15] rounded-full pointer-events-none" title="Online"></div>
                     </div>
 
                     {/* Name & Title & Inputs */}
-                    <div className="flex-1 pt-16 md:pt-0 w-full">
+                    <div className="flex-1 pt-2 md:pt-0 w-full">
                         {isEditing ? (
                             <div className="space-y-4 w-full max-w-xl">
                                 {/* Instructions */}
@@ -187,7 +187,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
                                             type="text" 
                                             value={name} 
                                             onChange={e => setName(e.target.value)} 
-                                            className="w-full bg-[#151725] text-white text-xl font-bold px-3 py-2 rounded-lg border border-white/10 focus:border-cyan-500 outline-none"
+                                            className="w-full bg-[#151725] text-white text-lg md:text-xl font-bold px-3 py-2 rounded-lg border border-white/10 focus:border-cyan-500 outline-none"
                                             placeholder="Seu Nome"
                                         />
                                     </div>
@@ -218,11 +218,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
                             </div>
                         ) : (
                             <div>
-                                <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                                <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
                                     {name}
-                                    {isOwnProfile && <span className="text-cyan-500 text-lg" title="Perfil Verificado"><CheckCircleIcon className="h-5 w-5"/></span>}
+                                    {isOwnProfile && <span className="text-cyan-500 text-base md:text-lg" title="Perfil Verificado"><CheckCircleIcon className="h-4 w-4 md:h-5 md:w-5"/></span>}
                                 </h1>
-                                <p className="text-lg text-slate-300 font-medium">{jobTitle || 'Membro da Equipe'}</p>
+                                <p className="text-base md:text-lg text-slate-300 font-medium">{jobTitle || 'Membro da Equipe'}</p>
                                 <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
                                     <span className="opacity-80">{location || 'Localização não definida'}</span>
                                 </p>
@@ -231,28 +231,28 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 mt-4 md:mt-0 self-start md:self-end mb-4">
+                    <div className="flex gap-2 md:gap-3 mt-0 md:mt-0 self-start md:self-end mb-4">
                         {isOwnProfile ? (
                             isEditing ? (
                                 <div className="flex gap-2">
                                      <button 
                                         onClick={handleCancel}
-                                        className="px-6 py-2 rounded-full border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors font-medium text-sm"
+                                        className="px-4 md:px-6 py-2 rounded-full border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors font-medium text-xs md:text-sm"
                                     >
                                         Cancelar
                                     </button>
                                     <button 
                                         onClick={handleSave}
                                         disabled={isSaving}
-                                        className="px-6 py-2 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium shadow-lg shadow-cyan-900/40 transition-all text-sm"
+                                        className="px-4 md:px-6 py-2 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium shadow-lg shadow-cyan-900/40 transition-all text-xs md:text-sm"
                                     >
-                                        {isSaving ? 'Salvando...' : 'Salvar Perfil'}
+                                        {isSaving ? 'Salvando...' : 'Salvar'}
                                     </button>
                                 </div>
                             ) : (
                                 <button 
                                     onClick={() => setIsEditing(true)}
-                                    className="px-6 py-2 rounded-full border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 transition-colors font-medium flex items-center gap-2 text-sm"
+                                    className="px-4 md:px-6 py-2 rounded-full border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 transition-colors font-medium flex items-center gap-2 text-xs md:text-sm"
                                 >
                                     <EditIcon className="h-4 w-4" /> Editar Perfil
                                 </button>
@@ -278,42 +278,42 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, posts, isOwnProf
                             />
                         </div>
                     ) : (
-                        <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{bio || 'Nenhuma biografia adicionada.'}</p>
+                        <p className="text-slate-300 leading-relaxed whitespace-pre-wrap text-sm md:text-base">{bio || 'Nenhuma biografia adicionada.'}</p>
                     )}
                 </div>
 
                 {/* --- Stats Grid --- */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 max-w-4xl">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-10 max-w-4xl">
                      <div className="bg-[#151725]/50 border border-white/5 p-4 rounded-2xl">
-                        <span className="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Seguidores</span>
-                        <span className="text-2xl font-bold text-white">{user.followers || 0}</span>
+                        <span className="block text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Seguidores</span>
+                        <span className="text-xl md:text-2xl font-bold text-white">{user.followers || 0}</span>
                      </div>
                      <div className="bg-[#151725]/50 border border-white/5 p-4 rounded-2xl">
-                        <span className="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Seguindo</span>
-                        <span className="text-2xl font-bold text-white">{user.following || 0}</span>
+                        <span className="block text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Seguindo</span>
+                        <span className="text-xl md:text-2xl font-bold text-white">{user.following || 0}</span>
                      </div>
                      <div className="bg-[#151725]/50 border border-white/5 p-4 rounded-2xl">
-                        <span className="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Score <TrophyIcon className="h-3 w-3 text-amber-400"/></span>
-                        <span className="text-2xl font-bold text-amber-400">{user.points}</span>
+                        <span className="block text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Score <TrophyIcon className="h-3 w-3 text-amber-400"/></span>
+                        <span className="text-xl md:text-2xl font-bold text-amber-400">{user.points}</span>
                      </div>
                       <div className="bg-[#151725]/50 border border-white/5 p-4 rounded-2xl">
-                        <span className="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Publicações</span>
-                        <span className="text-2xl font-bold text-white">{userPosts.length}</span>
+                        <span className="block text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Publicações</span>
+                        <span className="text-xl md:text-2xl font-bold text-white">{userPosts.length}</span>
                      </div>
                 </div>
 
                 {/* --- Content Tabs --- */}
                 <div className="border-t border-white/10">
-                    <div className="flex gap-8 mt-6 mb-6">
-                        <button className="text-cyan-400 font-bold border-b-2 border-cyan-400 pb-2 px-1">Publicações</button>
-                        <button className="text-slate-500 font-medium hover:text-slate-300 transition-colors pb-2 px-1">Sobre</button>
-                        <button className="text-slate-500 font-medium hover:text-slate-300 transition-colors pb-2 px-1">Atividade</button>
+                    <div className="flex gap-6 md:gap-8 mt-6 mb-6 overflow-x-auto">
+                        <button className="text-cyan-400 font-bold border-b-2 border-cyan-400 pb-2 px-1 text-sm md:text-base flex-shrink-0">Publicações</button>
+                        <button className="text-slate-500 font-medium hover:text-slate-300 transition-colors pb-2 px-1 text-sm md:text-base flex-shrink-0">Sobre</button>
+                        <button className="text-slate-500 font-medium hover:text-slate-300 transition-colors pb-2 px-1 text-sm md:text-base flex-shrink-0">Atividade</button>
                     </div>
 
-                    <div className="space-y-6 pb-10 max-w-3xl">
+                    <div className="space-y-6 pb-24 md:pb-10 max-w-3xl">
                         {userPosts.length > 0 ? (
                             userPosts.map(post => (
-                                <div key={post.id} className="bg-[#151725]/30 border border-white/5 p-6 rounded-2xl hover:border-white/10 transition-colors">
+                                <div key={post.id} className="bg-[#151725]/30 border border-white/5 p-4 md:p-6 rounded-2xl hover:border-white/10 transition-colors">
                                     <div className="flex items-center gap-3 mb-3">
                                         <div className="h-10 w-10 rounded-full bg-slate-700 overflow-hidden">
                                             {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover"/> : <UserIcon className="h-6 w-6 m-2 text-slate-400"/>}

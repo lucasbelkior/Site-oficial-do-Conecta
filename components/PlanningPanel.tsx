@@ -43,18 +43,18 @@ export const PlanningPanel: React.FC<PlanningPanelProps> = ({ reminders, current
     };
 
     return (
-        <div className="p-8 h-full overflow-y-auto custom-scrollbar">
+        <div className="p-4 md:p-8 h-full overflow-y-auto custom-scrollbar">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                    <CalendarIcon className="h-8 w-8 text-amber-400" />
+                <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                    <CalendarIcon className="h-6 w-6 md:h-8 md:w-8 text-amber-400" />
                     Planejamento Global
                 </h1>
-                <p className="text-slate-400 mt-1">Crie eventos e lembretes que aparecerão no calendário de toda a equipe.</p>
+                <p className="text-slate-400 mt-1 text-sm md:text-base">Crie eventos e lembretes para toda a equipe.</p>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Form Section */}
-                <div className="bg-[#151725]/60 border border-white/10 rounded-2xl p-6 h-fit">
+                <div className="bg-[#151725]/60 border border-white/10 rounded-2xl p-6 h-fit order-2 lg:order-1">
                     <h2 className="text-lg font-bold text-white mb-4">Novo Evento</h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
@@ -111,7 +111,7 @@ export const PlanningPanel: React.FC<PlanningPanelProps> = ({ reminders, current
                 </div>
 
                 {/* List Section */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 order-1 lg:order-2">
                     <h2 className="text-lg font-bold text-white mb-4">Eventos Agendados</h2>
                     <div className="space-y-3">
                         {reminders.length === 0 && (

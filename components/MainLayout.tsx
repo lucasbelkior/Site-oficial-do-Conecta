@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { BottomNav } from './BottomNav'; // Import BottomNav
 import { ChatWindow } from './ChatWindow';
 import { ChatInput } from './ChatInput';
 import { AdminPanel } from './AdminPanel';
@@ -19,12 +20,12 @@ import {
     subscribeToChannelMessages,
     subscribeToTeams, 
     subscribeToReminders, 
-    subscribeToDirectMessages, // New Subscription
+    subscribeToDirectMessages,
     addTaskToFirestore, 
     updateTaskInFirestore, 
     deleteTaskFromFirestore,
     addMessageToFirestore,
-    addDirectMessageToFirestore, // New Action
+    addDirectMessageToFirestore,
     updateUserPoints
 } from '../database';
 import { initialPosts } from '../socialDatabase';
@@ -42,7 +43,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const [channelMessages, setChannelMessages] = useState<ChannelMessage[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [reminders, setReminders] = useState<GlobalReminder[]>([]); 
-    const [directMessages, setDirectMessages] = useState<SocialMessage[]>([]); // New State
+    const [directMessages, setDirectMessages] = useState<SocialMessage[]>([]);
 
     const [messages, setMessages] = useState<Message[]>([
       { id: 1, text: `Olá ${currentUser.name}! Sou o assistente da Conecta. Como posso ajudar a equipe hoje?`, sender: MessageSender.ASSISTANT}
@@ -67,7 +68,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         const unsubMessages = subscribeToChannelMessages(setChannelMessages);
         const unsubTeams = subscribeToTeams(setTeams);
         const unsubReminders = subscribeToReminders(setReminders);
-        const unsubDirectMessages = subscribeToDirectMessages(setDirectMessages); // Subscribe to DMs
+        const unsubDirectMessages = subscribeToDirectMessages(setDirectMessages);
 
         return () => {
             unsubTasks();
@@ -218,10 +219,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         }
     };
 
-    const handleToggleAdminView = () => { setView(prev => prev === 'admin' ? 'assistant' : 'admin'); setViewingMember(null); setActiveChannelId(null); };
-    const handleToggleSocialView = () => { setView(prev => prev === 'social' ? 'assistant' : 'social'); setActiveChannelId(null); };
-    const handleToggleTeamsView = () => { setView(prev => prev === 'teams' ? 'assistant' : 'teams'); setActiveChannelId(null); };
-    const handleTogglePlanningView = () => { setView(prev => prev === 'planning' ? 'assistant' : 'planning'); setActiveChannelId(null); };
+    // Navigation Handlers
+    const handleToggleAdminView = () => { setView('admin'); setViewingMember(null); setActiveChannelId(null); };
+    const handleToggleSocialView = () => { setView('social'); setActiveChannelId(null); };
+    const handleToggleTeamsView = () => { setView('teams'); setActiveChannelId(null); };
+    const handleTogglePlanningView = () => { setView('planning'); setActiveChannelId(null); };
     const handleToggleAssistantView = () => { setView('assistant'); setViewingMember(null); setActiveChannelId(null); };
     const handleToggleCalendarView = () => { setView('calendar'); setViewingMember(null); setActiveChannelId(null); };
 
@@ -243,7 +245,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         await addMessageToFirestore(newMessage);
     };
 
-    // New: Handle Direct Message Send
     const handleSendDirectMessage = async (text: string, receiverId: string, attachments?: Attachment[]) => {
         const newMessage: SocialMessage = {
             id: `dm-${Date.now()}`,
@@ -320,8 +321,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                     isLoadingNews={isLoadingNews}
                     teams={teams}
                     showFeed={!isBoss}
-                    directMessages={directMessages} // Pass synced messages
-                    onSendDirectMessage={handleSendDirectMessage} // Pass send handler
+                    directMessages={directMessages}
+                    onSendDirectMessage={handleSendDirectMessage}
                     onCreatePost={(text) => {
                         const newPost: Post = {
                             id: `p-${Date.now()}`,
@@ -334,8 +335,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                 />
             );
         }
+        // Assistant View
         return (
-            <>
+            <div className="flex flex-col h-full relative">
                 <ChatWindow messages={messages} isLoading={isLoading} />
                 <ChatInput 
                     ref={chatInputRef}
@@ -344,46 +346,71 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                     onSubmit={handleSendMessage}
                     isLoading={isLoading}
                 />
-            </>
+            </div>
         );
     };
 
     return (
-        <div className="flex flex-col h-screen bg-brand-dark text-brand-text overflow-hidden font-sans selection:bg-cyan-500/30 selection:text-white transition-colors duration-300">
-            <Header onLogoClick={handleLogoClick} />
-            <div className="flex flex-1 overflow-hidden">
-                <Sidebar 
-                    channels={channels}
-                    users={visibleUsers}
-                    tasks={tasks}
-                    currentUser={currentUser}
-                    view={view}
-                    activeChannelId={activeChannelId}
-                    onLogout={onLogout}
-                    onInitiateEdit={(taskId) => {
-                         if (currentUser.role === Role.PATRAO) {
-                             setView('admin');
-                         }
-                    }}
-                    onToggleAdminView={handleToggleAdminView}
-                    onToggleSocialView={handleToggleSocialView}
-                    onToggleAssistantView={handleToggleAssistantView}
-                    onToggleCalendarView={handleToggleCalendarView}
-                    onToggleTeamsView={handleToggleTeamsView}
-                    onTogglePlanningView={handleTogglePlanningView}
-                    onSelectChannel={handleSelectChannel}
-                    onViewMember={handleViewMember}
-                />
-                <main className="flex-1 flex flex-col min-w-0 bg-brand-dark relative transition-colors duration-300">
-                     <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[100px]"></div>
-                         <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-cyan-900/10 rounded-full blur-[100px]"></div>
+        <div className="flex flex-col h-screen bg-[#0B0C15] text-brand-text overflow-hidden font-sans selection:bg-cyan-500/30 selection:text-white transition-colors duration-300">
+            {/* Header hidden on mobile if needed, or simplified. For now we keep it but it needs to play nice with mobile layout */}
+            <div className="hidden md:block relative z-20">
+                <Header onLogoClick={handleLogoClick} />
+            </div>
+            
+            {/* Mobile Header (simplified) */}
+             <div className="md:hidden h-14 border-b border-white/5 bg-[#0B0C15]/80 backdrop-blur-xl flex items-center justify-center relative z-20 sticky top-0">
+                <img src="https://i.imgur.com/syClG5w.png" alt="Conecta" className="h-6 opacity-90 drop-shadow-[0_0_8px_rgba(91,197,242,0.5)]" />
+                <button 
+                    onClick={onLogout} 
+                    className="absolute right-4 text-xs text-slate-400 border border-white/10 px-3 py-1.5 rounded-full hover:bg-white/5 transition-colors"
+                >
+                    Sair
+                </button>
+            </div>
+
+            <div className="flex flex-1 overflow-hidden relative">
+                {/* Desktop/Tablet Sidebar - Hidden on Mobile */}
+                <div className="hidden md:flex relative z-30">
+                    <Sidebar 
+                        channels={channels}
+                        users={visibleUsers}
+                        tasks={tasks}
+                        currentUser={currentUser}
+                        view={view}
+                        activeChannelId={activeChannelId}
+                        onLogout={onLogout}
+                        onInitiateEdit={(taskId) => {
+                            if (currentUser.role === Role.PATRAO) {
+                                setView('admin');
+                            }
+                        }}
+                        onToggleAdminView={handleToggleAdminView}
+                        onToggleSocialView={handleToggleSocialView}
+                        onToggleAssistantView={handleToggleAssistantView}
+                        onToggleCalendarView={handleToggleCalendarView}
+                        onToggleTeamsView={handleToggleTeamsView}
+                        onTogglePlanningView={handleTogglePlanningView}
+                        onSelectChannel={handleSelectChannel}
+                        onViewMember={handleViewMember}
+                    />
+                </div>
+
+                <main className="flex-1 flex flex-col min-w-0 bg-[#0B0C15] relative transition-colors duration-300 pb-16 md:pb-0">
+                     {/* Background Ambient Effect - Beautiful Glows */}
+                     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                         <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse" style={{animationDuration: '8s'}}></div>
+                         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[100px] animate-pulse" style={{animationDuration: '12s'}}></div>
+                         <div className="absolute top-[40%] left-[30%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[80px] animate-pulse" style={{animationDuration: '10s'}}></div>
                     </div>
-                    <div className="relative z-10 flex flex-col h-full">
+                    
+                    <div className="relative z-10 flex flex-col h-full bg-[#0B0C15]/30 backdrop-blur-sm">
                         {renderMainContent()}
                     </div>
                 </main>
             </div>
+
+            {/* Mobile Bottom Navigation */}
+            <BottomNav view={view} currentUser={currentUser} onToggleView={setView} />
         </div>
     );
 };

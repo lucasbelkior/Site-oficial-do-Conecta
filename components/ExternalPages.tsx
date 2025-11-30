@@ -265,6 +265,9 @@ export const ExplorePage: React.FC<PageProps> = ({ onNavigate }) => {
         opacity: 0;
         transition: opacity 1.2s ease;
         overflow-x: hidden;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
     }
     .explore-page.fade-in {
         opacity: 1;
@@ -284,7 +287,7 @@ export const ExplorePage: React.FC<PageProps> = ({ onNavigate }) => {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.6);
+      background: linear-gradient(to bottom, rgba(11, 12, 21, 0.7), rgba(11, 12, 21, 0.95));
       z-index: -1;
     }
     .explore-header {
@@ -295,112 +298,212 @@ export const ExplorePage: React.FC<PageProps> = ({ onNavigate }) => {
       justify-content: space-between;
       gap: 20px;
       position: relative;
-      z-index: 1;
+      z-index: 10;
     }
     .btn-login {
       padding: 10px 25px;
-      background: #1371e2;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
       color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
       cursor: pointer;
       transition: 0.3s;
       text-decoration: none;
+      backdrop-filter: blur(10px);
+      font-weight: 600;
     }
     .btn-login:hover {
-      background: #0f5bb5;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      background: white;
+      color: #0B0C15;
+    }
+    .hero-section {
+        text-align: center;
+        padding: 60px 20px 40px;
+        position: relative;
+        z-index: 1;
     }
     .titulo {
-      text-align: center;
-      margin-top: 60px;
       font-size: 3.5rem;
-      font-weight: 600;
-      position: relative;
-      z-index: 1;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      font-weight: 800;
+      letter-spacing: -1px;
+      text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 15px;
+      line-height: 1.1;
+    }
+    .titulo span {
+        background: linear-gradient(135deg, #3dcaff 0%, #1371e2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     .sub {
-      text-align: center;
-      margin-top: 10px;
-      font-size: 1.6rem;
-      color: #3dcaff;
-      position: relative;
-      z-index: 1;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      font-size: 1.2rem;
+      color: #94a3b8;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
     }
     .recursos-container {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 30px;
-      padding: 40px 60px;
-      margin-top: 20px;
+      gap: 20px;
+      padding: 20px 60px;
+      max-width: 1200px;
+      margin: 0 auto;
       position: relative;
       z-index: 1;
+      width: 100%;
     }
     .recurso {
       display: flex;
-      align-items: center;
-      gap: 25px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
       padding: 30px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       transition: all 0.4s ease;
       opacity: 0;
       transform: translateY(30px);
+      position: relative;
+      overflow: hidden;
+    }
+    .recurso::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at top right, rgba(61, 202, 255, 0.1), transparent 60%);
+        opacity: 0;
+        transition: opacity 0.4s;
     }
     .recurso.ativo {
       opacity: 1;
       transform: translateY(0);
     }
     .recurso:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
       transform: translateY(-5px);
       border-color: rgba(91, 197, 242, 0.3);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .recurso:hover::before {
+        opacity: 1;
     }
     .recurso-icone {
-      flex: 0 0 70px;
-      height: 70px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, rgba(61, 202, 255, 0.2), rgba(19, 113, 226, 0.2));
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 1.8rem;
       color: #3dcaff;
-      transition: all 0.3s ease;
+      border: 1px solid rgba(61, 202, 255, 0.3);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     }
-    .recurso h3 { font-size: 1.5rem; margin-bottom: 8px; color: white; }
-    .recurso p { font-size: 1rem; color: rgba(255, 255, 255, 0.8); line-height: 1.5; margin: 0; }
+    .recurso h3 { 
+        font-size: 1.4rem; 
+        margin-bottom: 10px; 
+        color: white; 
+        font-weight: 700;
+    }
+    .recurso p { 
+        font-size: 0.95rem; 
+        color: #94a3b8; 
+        line-height: 1.6; 
+        margin: 0; 
+    }
     .destaque {
       text-align: center;
-      padding: 60px 40px;
+      padding: 80px 20px;
       position: relative;
       z-index: 1;
+      background: linear-gradient(to top, #0B0C15, transparent);
+      margin-top: auto;
     }
-    .destaque h2 { font-size: 2.5rem; margin-bottom: 20px; }
-    .destaque p { font-size: 1.3rem; max-width: 700px; margin: 0 auto 30px; color: rgba(255, 255, 255, 0.9); }
+    .destaque h2 { font-size: 2rem; margin-bottom: 15px; font-weight: 700; }
+    .destaque p { font-size: 1.1rem; max-width: 600px; margin: 0 auto 30px; color: #94a3b8; }
     .btn-destaque {
-      display: inline-block;
-      padding: 15px 40px;
-      background: #1371e2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 40px;
+      background: linear-gradient(90deg, #1371e2, #3dcaff);
       color: white;
       border: none;
-      border-radius: 10px;
-      font-size: 1.2rem;
+      border-radius: 50px;
+      font-size: 1.1rem;
       cursor: pointer;
       transition: 0.3s;
       text-decoration: none;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(19, 113, 226, 0.4);
+      font-weight: 700;
+      box-shadow: 0 10px 30px rgba(19, 113, 226, 0.4);
     }
-    @media (max-width: 900px) {
-      .recursos-container { grid-template-columns: 1fr; padding: 40px 20px; }
-      .recurso { flex-direction: column; text-align: center; padding: 25px; }
+    .btn-destaque:hover {
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(19, 113, 226, 0.6);
+    }
+
+    /* MOBILE SPECIFIC STYLES */
+    @media (max-width: 768px) {
+      .explore-header {
+        padding: 15px 20px;
+      }
+      .logo-img-header {
+        height: 24px;
+      }
+      .hero-section {
+        padding: 40px 20px 20px;
+        text-align: left;
+      }
+      .titulo {
+        font-size: 2.5rem;
+        text-align: left;
+      }
+      .sub {
+        text-align: left;
+        font-size: 1rem;
+      }
+      .recursos-container {
+        grid-template-columns: 1fr; /* Single column */
+        padding: 20px;
+        gap: 15px;
+      }
+      .recurso {
+        flex-direction: row; /* Icon left, text right */
+        align-items: center;
+        padding: 20px;
+        text-align: left;
+        gap: 20px;
+      }
+      .recurso-icone {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+      }
+      .recurso-conteudo h3 {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+      }
+      .recurso-conteudo p {
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+      .destaque {
+        padding: 60px 20px 100px; /* More bottom padding for scroll */
+      }
+      .destaque h2 {
+        font-size: 1.8rem;
+      }
+      .btn-destaque {
+        width: 100%;
+      }
     }
     `;
 
@@ -408,22 +511,23 @@ export const ExplorePage: React.FC<PageProps> = ({ onNavigate }) => {
         <div className="external-page explore-page">
              <style>{COMMON_STYLES}{styles}</style>
              
-             {/* Public Video Link */}
+             {/* Background Video */}
              <video autoPlay muted loop id="background-video">
                 <source src="https://cdn.pixabay.com/video/2019/05/16/23645-336369040_large.mp4" type="video/mp4" />
              </video>
              <div className="overlay"></div>
 
              <header className="explore-header">
-                <div style={{ width: '180px' }}>
-                    {/* WHITE LOGO FOR DARK EXPLORE PAGE */}
-                    <img src="https://i.imgur.com/d0MPLlg.png" alt="Conecta Logo" className="w-full h-auto" />
+                <div style={{ width: '140px' }} onClick={() => onNavigate('splash')}>
+                    <img src="https://i.imgur.com/d0MPLlg.png" alt="Conecta Logo" className="w-full h-auto logo-img-header" />
                 </div>
-                <button onClick={() => onNavigate('login')} className="btn-login">Cadastrar / Login</button>
+                <button onClick={() => onNavigate('login')} className="btn-login">Entrar</button>
              </header>
 
-             <h1 className="titulo">Explore o Conecta.ai</h1>
-             <p className="sub">Tecnologia, comunicação e colaboração em um único lugar.</p>
+             <section className="hero-section">
+                 <h1 className="titulo">O futuro do<br/><span>trabalho em equipe</span></h1>
+                 <p className="sub">Uma plataforma unificada para comunicação, gestão e gamificação. Transforme a produtividade da sua empresa hoje.</p>
+             </section>
 
              <div className="recursos-container">
                 <div className="recurso">
@@ -436,30 +540,30 @@ export const ExplorePage: React.FC<PageProps> = ({ onNavigate }) => {
                 <div className="recurso">
                   <div className="recurso-icone"><i className="fas fa-video"></i></div>
                   <div className="recurso-conteudo">
-                    <h3>Chamadas de Vídeo</h3>
-                    <p>Reuniões profissionais com estabilidade e qualidade excepcionais.</p>
+                    <h3>Videochamadas</h3>
+                    <p>Reuniões em HD com compartilhamento de tela e gravação automática.</p>
                   </div>
                 </div>
                 <div className="recurso">
-                  <div className="recurso-icone"><i className="fas fa-users"></i></div>
+                  <div className="recurso-icone"><i className="fas fa-trophy"></i></div>
                   <div className="recurso-conteudo">
-                    <h3>Grupos</h3>
-                    <p>Espaços dedicados para cada setor, projeto ou equipe.</p>
+                    <h3>Gamificação</h3>
+                    <p>Engaje sua equipe com sistema de pontos, rankings e recompensas.</p>
                   </div>
                 </div>
                 <div className="recurso">
-                  <div className="recurso-icone"><i className="fas fa-tasks"></i></div>
+                  <div className="recurso-icone"><i className="fas fa-robot"></i></div>
                   <div className="recurso-conteudo">
-                    <h3>Organização</h3>
-                    <p>Tarefas, agenda, documentos e tudo no mesmo sistema.</p>
+                    <h3>Assistente IA</h3>
+                    <p>Automatize tarefas e obtenha insights com nossa IA integrada.</p>
                   </div>
                 </div>
              </div>
 
              <div className="destaque">
-                <h2>Pronto para transformar sua comunicação?</h2>
-                <p>Junte-se a milhares de empresas que já utilizam o Conecta.ai.</p>
-                <button onClick={() => onNavigate('register')} className="btn-destaque">Experimente Gratuitamente</button>
+                <h2>Pronto para começar?</h2>
+                <p>Junte-se a milhares de equipes produtivas.</p>
+                <button onClick={() => onNavigate('register')} className="btn-destaque">Criar Conta Grátis</button>
              </div>
         </div>
     );

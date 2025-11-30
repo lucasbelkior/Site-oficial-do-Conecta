@@ -30,9 +30,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminde
     };
 
     const isSameDate = (dateStr: string, dateObj: Date) => {
-        // format of dateStr is DD/MM/YYYY
-        // dateStr from input type='date' in planning panel might be YYYY-MM-DD if not formatted before save
-        // but we formatted it in PlanningPanel to DD/MM/YYYY.
         const [d, m, y] = dateStr.split('/');
         return parseInt(d) === dateObj.getDate() && 
                parseInt(m) === dateObj.getMonth() + 1 && 
@@ -45,8 +42,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminde
         const dateObj = new Date(year, month, day);
 
         const dayTasks = tasks.filter(t => t.deadline && isSameDate(t.deadline, dateObj));
-        // Filter global reminders
-        const dayReminders = globalReminders.filter(r => isSameDate(r.date, dateObj));
+        const dayReminders = globalReminders.filter(r => r.date && isSameDate(r.date, dateObj));
 
         return { tasks: dayTasks, reminders: dayReminders };
     };
@@ -60,7 +56,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminde
 
         // Empty cells
         for (let i = 0; i < firstDay; i++) {
-            days.push(<div key={`empty-${i}`} className="h-24 md:h-32 bg-transparent opacity-0"></div>);
+            days.push(<div key={`empty-${i}`} className="min-h-[60px] md:h-24 lg:h-32 bg-transparent opacity-0"></div>);
         }
 
         // Calendar Days
@@ -75,7 +71,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminde
                 <button 
                     key={day} 
                     onClick={() => setSelectedDate(dateObj)}
-                    className={`h-24 md:h-32 relative rounded-2xl border transition-all duration-300 flex flex-col items-start justify-between p-3 group overflow-hidden ${
+                    className={`min-h-[60px] md:h-24 lg:h-32 relative rounded-xl md:rounded-2xl border transition-all duration-300 flex flex-col items-start justify-between p-1.5 md:p-3 group overflow-hidden ${
                         isSelected 
                             ? 'bg-gradient-to-br from-cyan-900/40 to-blue-900/40 border-cyan-500/50 shadow-[0_0_20px_rgba(91,197,242,0.2)]' 
                             : isToday 
@@ -83,26 +79,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminde
                                 : 'bg-[#151725]/40 border-white/5 hover:bg-white/5 hover:border-white/10'
                     }`}
                 >
-                    <span className={`text-sm font-bold flex items-center justify-center w-8 h-8 rounded-full ${isToday ? 'bg-cyan-500 text-white' : isSelected ? 'text-cyan-300' : 'text-slate-400'}`}>
+                    <span className={`text-xs md:text-sm font-bold flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-full ${isToday ? 'bg-cyan-500 text-white' : isSelected ? 'text-cyan-300' : 'text-slate-400'}`}>
                         {day}
                     </span>
 
-                    <div className="w-full space-y-1.5 pl-1">
+                    <div className="w-full space-y-1 pl-0.5 md:pl-1 mt-1">
                         {dayTasks.length > 0 && (
-                            <div className="flex items-center space-x-1.5">
-                                <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.8)]"></span>
-                                <span className="text-[10px] text-slate-400 font-medium hidden md:inline">{dayTasks.length} Entrega{dayTasks.length > 1 ? 's' : ''}</span>
+                            <div className="flex items-center space-x-1">
+                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,0.8)]"></span>
+                                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium hidden sm:inline">{dayTasks.length} {dayTasks.length === 1 ? 'Task' : 'Tasks'}</span>
                             </div>
                         )}
                          {dayReminders.length > 0 && (
-                            <div className="flex items-center space-x-1.5">
-                                <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_5px_rgba(192,132,252,0.8)]"></span>
-                                <span className="text-[10px] text-slate-400 font-medium hidden md:inline">{dayReminders.length} Evento{dayReminders.length > 1 ? 's' : ''}</span>
+                            <div className="flex items-center space-x-1">
+                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-purple-400 shadow-[0_0_5px_rgba(192,132,252,0.8)]"></span>
+                                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium hidden sm:inline">{dayReminders.length} {dayReminders.length === 1 ? 'Event' : 'Events'}</span>
                             </div>
                         )}
                     </div>
                     
-                    {isSelected && <div className="absolute inset-0 border-2 border-cyan-500/30 rounded-2xl pointer-events-none"></div>}
+                    {isSelected && <div className="absolute inset-0 border-2 border-cyan-500/30 rounded-xl md:rounded-2xl pointer-events-none"></div>}
                 </button>
             );
         }
@@ -122,58 +118,58 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks, globalReminde
     }, [selectedDate, tasks, globalReminders]);
 
     return (
-        <div className="flex h-full bg-[#0B0C15]">
+        <div className="flex flex-col lg:flex-row h-full bg-[#0B0C15] overflow-y-auto lg:overflow-hidden">
             {/* Main Calendar Area */}
-            <div className="flex-1 flex flex-col p-6 overflow-hidden">
-                <header className="flex items-center justify-between mb-8">
+            <div className="flex-1 flex flex-col p-4 md:p-6 lg:overflow-hidden min-h-[500px]">
+                <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
                     <div>
-                        <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-                            <CalendarIcon className="h-8 w-8 text-cyan-400" />
+                        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                            <CalendarIcon className="h-6 w-6 md:h-8 md:w-8 text-cyan-400" />
                             Planejamento
                         </h2>
-                        <p className="text-slate-400 text-sm mt-1 ml-11">Gerencie prazos, eventos e entregas da equipe.</p>
+                        <p className="text-slate-400 text-xs md:text-sm mt-1 ml-9 md:ml-11">Gerencie prazos e eventos.</p>
                     </div>
                     
-                    <div className="flex items-center space-x-6 bg-[#151725]/50 backdrop-blur-md p-2 rounded-2xl border border-white/10">
-                        <button onClick={handlePrevMonth} className="p-3 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors">
-                            <ArrowLeftIcon className="h-5 w-5" />
+                    <div className="flex items-center justify-between w-full md:w-auto space-x-6 bg-[#151725]/50 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+                        <button onClick={handlePrevMonth} className="p-2 md:p-3 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors">
+                            <ArrowLeftIcon className="h-4 w-4 md:h-5 md:w-5" />
                         </button>
-                        <span className="text-xl font-bold text-white min-w-[180px] text-center tracking-wide">
-                            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                        <span className="text-lg md:text-xl font-bold text-white min-w-[140px] md:min-w-[180px] text-center tracking-wide">
+                            {monthNames[currentDate.getMonth()].substring(0, 3)} {currentDate.getFullYear()}
                         </span>
-                        <button onClick={handleNextMonth} className="p-3 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors">
-                            <ArrowLeftIcon className="h-5 w-5 rotate-180" />
+                        <button onClick={handleNextMonth} className="p-2 md:p-3 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors">
+                            <ArrowLeftIcon className="h-4 w-4 md:h-5 md:w-5 rotate-180" />
                         </button>
                     </div>
                 </header>
 
-                <div className="grid grid-cols-7 gap-4 mb-4 text-center px-2">
+                <div className="grid grid-cols-7 gap-2 md:gap-4 mb-2 text-center px-1">
                     {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-                        <div key={day} className="text-slate-500 text-xs font-bold uppercase tracking-widest">{day}</div>
+                        <div key={day} className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest truncate">{day.substring(0, 3)}</div>
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
-                    <div className="grid grid-cols-7 gap-3">
+                <div className="flex-1 lg:overflow-y-auto custom-scrollbar pr-0 md:pr-2 pb-6 lg:pb-0">
+                    <div className="grid grid-cols-7 gap-2 md:gap-3">
                         {renderCalendarDays()}
                     </div>
                 </div>
             </div>
 
-            {/* Side Agenda Panel */}
-            <div className="w-96 bg-[#0B0C15]/90 backdrop-blur-xl border-l border-white/5 p-8 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.3)] z-20">
-                <div className="mb-8">
+            {/* Side Agenda Panel - Stacks below on mobile/tablet */}
+            <div className="w-full lg:w-96 bg-[#0B0C15] lg:bg-[#0B0C15]/90 backdrop-blur-xl lg:border-l border-t lg:border-t-0 border-white/5 p-6 md:p-8 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.3)] z-20 h-auto lg:h-full lg:overflow-y-auto">
+                <div className="mb-6 md:mb-8">
                     <h3 className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Agenda do Dia</h3>
-                    <h2 className="text-4xl font-bold text-white tracking-tight">
-                        {selectedDate.getDate()} <span className="text-2xl text-slate-400 font-normal">{monthNames[selectedDate.getMonth()]}</span>
+                    <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                        {selectedDate.getDate()} <span className="text-xl md:text-2xl text-slate-400 font-normal">{monthNames[selectedDate.getMonth()]}</span>
                     </h2>
-                    <p className="text-slate-500 mt-1">{selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' })}</p>
+                    <p className="text-slate-500 mt-1 capitalize">{selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' })}</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                <div className="space-y-6">
                     {selectedDayContent.dayReminders.length === 0 && selectedDayContent.dayTasks.length === 0 && (
                         <div className="text-center py-10 opacity-40">
-                            <BellIcon className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                            <BellIcon className="h-10 w-10 md:h-12 md:w-12 text-slate-600 mx-auto mb-3" />
                             <p className="text-slate-400 text-sm">Nada agendado para este dia.</p>
                         </div>
                     )}

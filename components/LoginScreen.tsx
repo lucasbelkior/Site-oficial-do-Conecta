@@ -77,11 +77,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onNavi
         z-index: -1;
     }
     .container-login {
-        width: 450px;
+        width: 100%;
+        max-width: 450px;
         background-color: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
         color: #1371e2;
-        padding: 40px;
+        padding: 30px;
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
         transition: transform 0.3s ease;
         display: flex;
@@ -90,6 +91,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onNavi
         position: relative;
         z-index: 1;
         backdrop-filter: blur(5px);
+    }
+    @media (min-width: 640px) {
+        .container-login {
+            padding: 40px;
+        }
     }
     .container-login:hover {
         transform: translateY(-5px);
@@ -246,7 +252,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ users, onLogin, onNavi
             <main className="container-login">
                 <div className="text-center mb-5">
                     <div 
-                        style={{ width: '280px', margin: '0 auto', cursor: 'pointer' }}
+                        style={{ width: '280px', maxWidth: '100%', margin: '0 auto', cursor: 'pointer' }}
                         onClick={onNavigateSplash}
                         title="Voltar para a Intro"
                     >

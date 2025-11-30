@@ -130,21 +130,21 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
     // 1. Team Browsing View
     if (!selectedTeam) {
         return (
-            <div className="h-full bg-[#0B0C15] flex flex-col p-8 overflow-y-auto">
-                <header className="flex justify-between items-center mb-8">
+            <div className="h-full bg-[#0B0C15] flex flex-col p-4 md:p-8 overflow-y-auto">
+                <header className="flex justify-between items-center mb-6 md:mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                            <UsersIcon className="h-8 w-8 text-green-400" />
+                        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                            <UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />
                             Equipes
                         </h1>
-                        <p className="text-slate-400 mt-1">Encontre seu time ou crie uma nova comunidade.</p>
+                        <p className="text-slate-400 mt-1 text-sm md:text-base">Encontre seu time ou crie uma nova comunidade.</p>
                     </div>
                     {currentUser.role === Role.PATRAO && (
                         <button 
                             onClick={() => setIsCreatingTeam(true)}
-                            className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl font-bold transition-all shadow-lg shadow-green-900/20"
+                            className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 md:px-6 md:py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/20"
                         >
-                            + Criar Equipe
+                            + Criar <span className="hidden md:inline">Equipe</span>
                         </button>
                     )}
                 </header>
@@ -280,13 +280,21 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
     }
 
     // 2. Inside Selected Team View
+    // On Mobile: Flex Col (Sidebar on top/hidden based on logic, Chat on bottom/active)
+    // Actually, on mobile, we need to toggle between Channel List and Chat
+    const isMobile = window.innerWidth < 768; // Simple check, or rely on CSS hidden classes
+
     return (
-        <div className="h-full flex bg-[#0B0C15]">
-            {/* Team Sidebar */}
-            <div className="w-64 flex flex-col border-r border-white/5" style={sidebarStyle}>
+        <div className="h-full flex flex-col md:flex-row bg-[#0B0C15]">
+            {/* Team Sidebar (Channel List) */}
+            {/* Hidden on mobile IF a channel is selected */}
+            <div 
+                className={`w-full md:w-64 flex flex-col border-r border-white/5 ${selectedChannel ? 'hidden md:flex' : 'flex'}`} 
+                style={sidebarStyle}
+            >
                 <div className="p-4 border-b border-white/5">
                     <button onClick={() => { setSelectedTeam(null); setSelectedChannel(null); }} className="flex items-center text-slate-400 hover:text-white text-xs mb-3 transition-colors">
-                        <ArrowLeftIcon className="h-4 w-4 mr-1" /> Voltar
+                        <ArrowLeftIcon className="h-4 w-4 mr-1" /> Voltar para Equipes
                     </button>
                     
                     <div className="flex items-center gap-3 mb-2">
@@ -332,7 +340,7 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                                 <li key={channel.id}>
                                     <button 
                                         onClick={() => setSelectedChannel(channel)}
-                                        className={`w-full flex items-center px-2 py-1.5 rounded-md text-sm transition-colors ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-300'}`}
+                                        className={`w-full flex items-center px-2 py-3 md:py-1.5 rounded-md text-sm transition-colors ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-300'}`}
                                         style={isActive ? { borderLeft: `3px solid ${selectedTeam.themeColor || '#22c55e'}` } : { borderLeft: '3px solid transparent' }}
                                     >
                                         <HashtagIcon className="h-4 w-4 mr-2 opacity-70" />
@@ -349,15 +357,24 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
             </div>
 
             {/* Team Chat Area */}
-            <div className="flex-1 flex flex-col bg-[#0B0C15]">
+            {/* Hidden on mobile if NO channel selected */}
+            <div className={`flex-1 flex flex-col bg-[#0B0C15] ${!selectedChannel ? 'hidden md:flex' : 'flex'}`}>
                 {selectedChannel ? (
-                    <ChannelChat 
-                        channel={selectedChannel}
-                        messages={currentChannelMessages}
-                        currentUser={currentUser}
-                        allUsers={allUsers}
-                        onSendMessage={(text, attachments) => onSendChannelMessage(text, selectedChannel.id, attachments)}
-                    />
+                    <>
+                        {/* Mobile Back Button to Channel List */}
+                        <div className="md:hidden p-2 bg-[#151725] border-b border-white/5 flex items-center">
+                            <button onClick={() => setSelectedChannel(null)} className="flex items-center text-slate-400 text-sm">
+                                <ArrowLeftIcon className="h-4 w-4 mr-1" /> Canais
+                            </button>
+                        </div>
+                        <ChannelChat 
+                            channel={selectedChannel}
+                            messages={currentChannelMessages}
+                            currentUser={currentUser}
+                            allUsers={allUsers}
+                            onSendMessage={(text, attachments) => onSendChannelMessage(text, selectedChannel.id, attachments)}
+                        />
+                    </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 relative overflow-hidden">
                         {selectedTeam.logoUrl && (
@@ -367,7 +384,7 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                             <MessageSquareIcon className="h-10 w-10 text-slate-400" />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2 z-10">Bem-vindo ao {selectedTeam.name}</h3>
-                        <p className="z-10">Selecione um canal à esquerda para começar a colaborar.</p>
+                        <p className="z-10 px-4 text-center">Selecione um canal à esquerda para começar a colaborar.</p>
                     </div>
                 )}
             </div>
