@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
@@ -33,31 +33,54 @@ interface PageProps {
 export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
     const [introFinished, setIntroFinished] = useState(false);
     const [showContent, setShowContent] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     const handleVideoEnd = () => {
         // Added 3 seconds delay before fading out video to make intro longer
+        // Using a ref to prevent double execution if useEffect also triggers
+        if (introFinished) return;
+
         setTimeout(() => {
             setIntroFinished(true);
             setTimeout(() => setShowContent(true), 500);
         }, 3000); 
     };
 
+    const handleSkip = () => {
+         setIntroFinished(true);
+         setShowContent(true);
+    };
+
     const handleLogoClick = () => {
         // Reset states to replay the intro
         setShowContent(false);
         setIntroFinished(false);
+        if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+            videoRef.current.play().catch(console.error);
+        }
     };
 
     useEffect(() => {
-        // Increased fallback timer to 10s to account for video length + delay
+        // Try to force play on mount
+        if (videoRef.current) {
+            videoRef.current.play().catch(e => {
+                console.warn("Autoplay blocked or failed, skipping intro:", e);
+                // If autoplay fails heavily, just skip to content
+                // handleSkip(); 
+            });
+        }
+
+        // Safety timer: if video hangs or network fails, show content after 8s
         const timer = setTimeout(() => {
             if (!introFinished) {
+                console.log("Splash fallback timer triggered");
                 handleVideoEnd();
             }
-        }, 10000); 
+        }, 8000); 
 
         return () => clearTimeout(timer);
-    }, [introFinished]);
+    }, []);
 
     const styles = `
     #fundo-animado {
@@ -91,6 +114,10 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       padding: 0;
       border: none;
       overflow: hidden;
+      pointer-events: none; /* Let clicks pass through when hidden */
+    }
+    #vinheta.active {
+        pointer-events: auto;
     }
     #vinheta video {
         width: 100%;
@@ -176,14 +203,23 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
             </div>
 
             {/* Intro Video (Vinheta) */}
-            <div id="vinheta" style={{ opacity: introFinished ? 0 : 1, visibility: introFinished ? 'hidden' : 'visible' }}>
+            <div 
+                id="vinheta" 
+                className={!introFinished ? 'active' : ''}
+                style={{ opacity: introFinished ? 0 : 1, visibility: introFinished ? 'hidden' : 'visible' }}
+            >
                  {!introFinished && (
                     <video 
+                        ref={videoRef}
                         src="https://i.imgur.com/Nig6dt1.mp4" 
                         autoPlay 
                         muted 
                         playsInline
                         onEnded={handleVideoEnd}
+                        onError={() => {
+                            console.error("Vinheta failed to load/play");
+                            handleSkip();
+                        }}
                     />
                  )}
             </div>
