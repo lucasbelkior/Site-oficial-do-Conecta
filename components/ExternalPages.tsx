@@ -31,6 +31,7 @@ interface PageProps {
 // SPLASH PAGE (Intro)
 // ==========================================
 export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
+    // Start with Intro NOT finished, but content visible behind it
     const [introFinished, setIntroFinished] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -39,31 +40,20 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
     };
 
     useEffect(() => {
-        // Attempt to play intro video
-        const playVideo = async () => {
-            if (videoRef.current) {
-                try {
-                    // Tenta tocar. Se o navegador bloquear, cai no catch
-                    await videoRef.current.play();
-                } catch (err) {
-                    console.warn("Autoplay blocked, skipping intro.", err);
-                    finishIntro();
-                }
-            }
-        };
+        const timer = setTimeout(() => {
+            finishIntro();
+        }, 3500); // Segurança máxima: em 3.5s o intro some de qualquer jeito
 
-        if (!introFinished) {
-            playVideo();
-             // Safety Timer: Force finish after 4s if video stalls or fails to load
-            const timer = setTimeout(() => {
-                if (!introFinished) {
-                    console.log("Intro timed out, forcing finish.");
-                    finishIntro();
-                }
-            }, 4000);
-            return () => clearTimeout(timer);
+        // Tenta dar play
+        if (videoRef.current) {
+            videoRef.current.play().catch(() => {
+                // Se falhar autoplay, finaliza imediatamente para não travar
+                finishIntro();
+            });
         }
-    }, [introFinished]);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     const styles = `
     #fundo-animado {
@@ -81,7 +71,8 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       object-fit: cover;
       opacity: 0.4;
     }
-    #vinheta {
+    /* Vinheta is now an overlay that disappears */
+    #vinheta-overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -91,24 +82,30 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 50;
-      cursor: pointer; /* Indica que pode clicar para pular */
+      z-index: 999; /* Fica acima de tudo */
+      transition: opacity 0.8s ease, visibility 0.8s;
+      opacity: 1;
+      visibility: visible;
+    }
+    #vinheta-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
     .splash-content {
       position: relative;
-      z-index: 60;
+      z-index: 50; /* Conteúdo sempre lá, apenas abaixo da vinheta */
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      opacity: 0;
-      transition: opacity 1.5s ease;
-      pointer-events: none; /* Prevent clicks when invisible */
+      opacity: 0; 
+      animation: fadeInContent 1s forwards;
+      animation-delay: 0.5s; /* Pequeno delay para suavizar */
     }
-    .splash-content.visible {
-      opacity: 1;
-      pointer-events: auto;
+    @keyframes fadeInContent {
+        to { opacity: 1; }
     }
     .logo-img {
         max-width: 100%;
@@ -143,22 +140,21 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
     }
     .skip-btn {
         position: absolute;
-        bottom: 30px;
+        bottom: 40px;
         right: 30px;
-        z-index: 100;
-        color: rgba(255,255,255,0.8);
-        background: rgba(0,0,0,0.5);
-        padding: 8px 20px;
+        z-index: 1000;
+        color: white;
+        background: rgba(255,255,255,0.1);
+        padding: 10px 24px;
         border-radius: 30px;
         font-size: 0.9rem;
         cursor: pointer;
         border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(5px);
         transition: all 0.2s;
-        pointer-events: auto;
     }
     .skip-btn:hover {
-        background: rgba(255,255,255,0.2);
-        color: white;
+        background: rgba(255,255,255,0.25);
     }
     `;
 
@@ -166,7 +162,7 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
         <div className="external-page">
             <style>{COMMON_STYLES}{styles}</style>
             
-            {/* Background Loop (Always Visible) */}
+            {/* Background Loop (Always Playing) */}
             <div id="fundo-animado">
                 <video 
                     src="https://cdn.pixabay.com/video/2019/05/16/23645-336369040_large.mp4" 
@@ -177,30 +173,34 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
                 />
             </div>
 
-            {/* Intro Video Layer (Removed from DOM when finished) */}
-            {!introFinished && (
-                <div id="vinheta" onClick={finishIntro} title="Clique para pular">
-                    <video 
-                        ref={videoRef}
-                        src="https://i.imgur.com/Nig6dt1.mp4" 
-                        muted 
-                        playsInline
-                        onEnded={finishIntro}
-                        onError={(e) => {
-                            console.error("Erro no video da vinheta", e);
-                            finishIntro();
-                        }}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <button className="skip-btn" onClick={(e) => {
-                        e.stopPropagation();
+            {/* Intro Video Layer (Overlay that fades out) */}
+            <div 
+                id="vinheta-overlay" 
+                className={introFinished ? 'hidden' : ''} 
+                onClick={finishIntro}
+            >
+                <video 
+                    ref={videoRef}
+                    src="https://i.imgur.com/Nig6dt1.mp4" 
+                    muted 
+                    playsInline
+                    onEnded={finishIntro}
+                    onError={(e) => {
+                        console.warn("Video intro failed to load", e);
                         finishIntro();
-                    }}>Pular Intro</button>
-                </div>
-            )}
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <button className="skip-btn" onClick={(e) => {
+                    e.stopPropagation();
+                    finishIntro();
+                }}>
+                    Pular Intro
+                </button>
+            </div>
 
-            {/* Main Content Layer (Fades in when intro finishes) */}
-            <div className={`splash-content ${introFinished ? 'visible' : ''}`}>
+            {/* Main Content Layer (Always rendered, just underneath) */}
+            <div className="splash-content">
                 <header className="mb-8">
                     <div 
                         className="logo-container" 

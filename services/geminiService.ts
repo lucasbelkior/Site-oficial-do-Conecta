@@ -2,9 +2,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { User, Task, GeminiResponse, TechNewsItem, Message } from '../types';
 
-const API_KEY = process.env.API_KEY;
-if (!API_KEY) {
-    console.warn("API_KEY is not set in environment variables.");
+// SAFETY CHECK: If API Key is missing, use an empty string to prevent the app from crashing entirely on load.
+// The error will only occur when the user tries to USE the AI, not when opening the site.
+const API_KEY = process.env.API_KEY || "";
+
+if (!process.env.API_KEY) {
+    console.warn("⚠️ AVISO CRÍTICO: API_KEY não foi detectada. O assistente de IA não funcionará, mas o site abrirá.");
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
@@ -81,8 +84,8 @@ export const processCommand = async (
     state: { users: User[], tasks: Task[] }, 
     currentUser: User
 ): Promise<GeminiResponse> => {
-    if (!API_KEY) {
-        throw new Error("A chave da API do Gemini não foi configurada.");
+    if (!process.env.API_KEY) {
+        throw new Error("A chave da API do Gemini não foi configurada no sistema. Verifique as variáveis de ambiente.");
     }
     
     // Format last 10 messages for context
@@ -128,7 +131,7 @@ export const processCommand = async (
 
     } catch (error) {
         console.error("Gemini API error:", error);
-        throw new Error("Falha na comunicação com o assistente de IA.");
+        throw new Error("Falha na comunicação com o assistente de IA. Verifique sua conexão ou a chave de API.");
     }
 };
 
@@ -146,8 +149,11 @@ const techNewsSchema = {
 };
 
 export const getTechNews = async (): Promise<TechNewsItem[]> => {
-     if (!API_KEY) {
-        throw new Error("A chave da API do Gemini não foi configurada.");
+     if (!process.env.API_KEY) {
+        // Return dummy data instead of crashing if key is missing
+        return [
+            { title: "API Key Missing", summary: "Please configure your Gemini API Key to see real news.", source: "System" }
+        ];
     }
     const prompt = "Liste as 5 notícias de tecnologia mais recentes e relevantes do momento. Forneça um título, um breve resumo e a fonte de cada notícia.";
 
@@ -165,6 +171,6 @@ export const getTechNews = async (): Promise<TechNewsItem[]> => {
         return JSON.parse(jsonText) as TechNewsItem[];
     } catch (error) {
         console.error("Gemini API error while fetching news:", error);
-        throw new Error("Não foi possível buscar as notícias de tecnologia.");
+        return [];
     }
 };
