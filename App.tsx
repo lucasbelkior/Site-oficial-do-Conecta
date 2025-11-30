@@ -77,7 +77,15 @@ const App: React.FC = () => {
             setIsLoadingUser(false);
         });
 
-        return () => unsubscribe();
+        // Safety fallback: If Auth doesn't respond in 3 seconds, stop loading
+        const safetyTimer = setTimeout(() => {
+            if (isLoadingUser) setIsLoadingUser(false);
+        }, 5000);
+
+        return () => {
+            unsubscribe();
+            clearTimeout(safetyTimer);
+        };
     }, []);
 
     // Data Sync
@@ -91,7 +99,6 @@ const App: React.FC = () => {
             });
             
             // --- BACKDOOR PARA DESENVOLVEDOR ---
-            // Expõe a função promoteMe() no console do navegador
             (window as any).promoteMe = async () => {
                 console.log("🚀 Iniciando promoção para Patrão...");
                 try {
@@ -137,10 +144,10 @@ const App: React.FC = () => {
 
     if (isLoadingUser) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-brand-dark transition-colors duration-300">
+            <div className="h-screen w-screen flex items-center justify-center bg-[#0B0C15] fixed top-0 left-0 z-[9999]">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
-                    <p className="text-cyan-500 font-oddval animate-pulse">Carregando Conecta...</p>
+                    <div className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin"></div>
+                    <img src="https://i.imgur.com/syClG5w.png" alt="Conecta" className="h-6 mt-4 opacity-50 animate-pulse" />
                 </div>
             </div>
         );

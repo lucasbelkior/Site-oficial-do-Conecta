@@ -32,55 +32,40 @@ interface PageProps {
 // ==========================================
 export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
     const [introFinished, setIntroFinished] = useState(false);
+    // Start visible immediately if video fails, otherwise fade in
     const [showContent, setShowContent] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
-    const handleVideoEnd = () => {
-        // Added 3 seconds delay before fading out video to make intro longer
-        // Using a ref to prevent double execution if useEffect also triggers
-        if (introFinished) return;
-
-        setTimeout(() => {
-            setIntroFinished(true);
-            setTimeout(() => setShowContent(true), 500);
-        }, 3000); 
-    };
-
-    const handleSkip = () => {
-         setIntroFinished(true);
-         setShowContent(true);
-    };
-
-    const handleLogoClick = () => {
-        // Reset states to replay the intro
-        setShowContent(false);
-        setIntroFinished(false);
-        if (videoRef.current) {
-            videoRef.current.currentTime = 0;
-            videoRef.current.play().catch(console.error);
-        }
+    const finishIntro = () => {
+        setIntroFinished(true);
+        setShowContent(true);
     };
 
     useEffect(() => {
-        // Try to force play on mount
-        if (videoRef.current) {
-            videoRef.current.play().catch(e => {
-                console.warn("Autoplay blocked or failed, skipping intro:", e);
-                // If autoplay fails heavily, just skip to content
-                // handleSkip(); 
-            });
-        }
+        // Attempt to play
+        const playVideo = async () => {
+            if (videoRef.current) {
+                try {
+                    await videoRef.current.play();
+                } catch (err) {
+                    console.warn("Autoplay prevented. Showing content immediately.");
+                    finishIntro();
+                }
+            }
+        };
 
-        // Safety timer: if video hangs or network fails, show content after 8s
+        playVideo();
+
+        // Failsafe: If nothing happens in 4 seconds, show content anyway
         const timer = setTimeout(() => {
             if (!introFinished) {
-                console.log("Splash fallback timer triggered");
-                handleVideoEnd();
+                console.log("Failsafe timer triggered");
+                finishIntro();
             }
-        }, 8000); 
+        }, 4000);
 
         return () => clearTimeout(timer);
-    }, []);
+    }, [introFinished]);
 
     const styles = `
     #fundo-animado {
@@ -96,7 +81,7 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      opacity: 0.6;
+      opacity: 0.4;
     }
     #vinheta {
       position: fixed;
@@ -108,28 +93,12 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 999;
+      z-index: 50; /* Lower z-index so controls might work if needed, but high enough to cover bg */
       transition: opacity 0.8s ease, visibility 0.8s;
-      margin: 0;
-      padding: 0;
-      border: none;
-      overflow: hidden;
-      pointer-events: none; /* Let clicks pass through when hidden */
-    }
-    #vinheta.active {
-        pointer-events: auto;
-    }
-    #vinheta video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-        border: none;
-        outline: none;
     }
     .splash-content {
       position: relative;
-      z-index: 10;
+      z-index: 60; /* Higher than vinheta */
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -137,9 +106,11 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       height: 100vh;
       opacity: 0;
       transition: opacity 1s ease;
+      pointer-events: none;
     }
     .splash-content.visible {
       opacity: 1;
+      pointer-events: auto;
     }
     .logo-img {
         max-width: 100%;
@@ -165,25 +136,25 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
       transition: all 0.3s ease;
       text-decoration: none;
       font-weight: 600;
+      box-shadow: 0 0 15px rgba(19, 113, 226, 0.4);
     }
     .btn-splash:hover {
       background-color: #0e5dbb;
-      box-shadow: 0 0 20px rgba(19, 113, 226, 0.6);
+      box-shadow: 0 0 25px rgba(19, 113, 226, 0.8);
+      transform: translateY(-2px);
     }
-    .splash-h1 {
-      font-size: 2.4em;
-      margin-top: 20px;
-      font-weight: 600;
-      color: #fff;
-      text-align: center;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    }
-    .splash-p {
-      font-size: 1.2em;
-      margin-top: 5px;
-      font-weight: 500;
-      color: #90bbf9;
-      text-align: center;
+    .skip-btn {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+        color: white;
+        background: rgba(255,255,255,0.1);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.2);
     }
     `;
 
@@ -191,7 +162,7 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
         <div className="external-page">
             <style>{COMMON_STYLES}{styles}</style>
             
-            {/* Online Video Background */}
+            {/* Background Loop */}
             <div id="fundo-animado">
                 <video 
                     src="https://cdn.pixabay.com/video/2019/05/16/23645-336369040_large.mp4" 
@@ -202,38 +173,33 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
                 />
             </div>
 
-            {/* Intro Video (Vinheta) */}
-            <div 
-                id="vinheta" 
-                className={!introFinished ? 'active' : ''}
-                style={{ opacity: introFinished ? 0 : 1, visibility: introFinished ? 'hidden' : 'visible' }}
-            >
-                 {!introFinished && (
+            {/* Intro Video Layer */}
+            {!introFinished && (
+                <div id="vinheta">
                     <video 
                         ref={videoRef}
                         src="https://i.imgur.com/Nig6dt1.mp4" 
-                        autoPlay 
                         muted 
                         playsInline
-                        onEnded={handleVideoEnd}
-                        onError={() => {
-                            console.error("Vinheta failed to load/play");
-                            handleSkip();
-                        }}
+                        onEnded={finishIntro}
+                        onError={finishIntro}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                 )}
-            </div>
+                    <button className="skip-btn" onClick={finishIntro}>Pular Intro</button>
+                </div>
+            )}
 
-            {/* Main Content */}
+            {/* Main Content Layer */}
             <div className={`splash-content ${showContent ? 'visible' : ''}`}>
                 <header className="mb-8">
                     <div 
                         className="logo-container" 
                         style={{ width: '380px' }} 
-                        onClick={handleLogoClick}
-                        title="Clique para rever a intro"
+                        onClick={() => {
+                            // Easter egg or reload
+                            window.location.reload();
+                        }}
                     >
-                        {/* CORRECT LOGO (UPDATED) */}
                          <img 
                             src="https://i.imgur.com/syClG5w.png" 
                             alt="Conecta Logo" 
@@ -243,10 +209,16 @@ export const SplashPage: React.FC<PageProps> = ({ onNavigate }) => {
                     </div>
                 </header>
 
-                <main className="flex flex-col items-center">
-                    <h1 className="splash-h1">Bem-vindo ao Conecta.ai</h1>
-                    <p className="splash-p">Conectando ideias e tecnologia.</p>
-                    <button onClick={() => onNavigate('explore')} className="btn-splash">Explorar</button>
+                <main className="flex flex-col items-center text-center px-4">
+                    <h1 style={{ fontSize: '2.5em', fontWeight: '700', color: 'white', marginBottom: '10px', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>
+                        Bem-vindo ao Conecta.ai
+                    </h1>
+                    <p style={{ fontSize: '1.2em', color: '#90bbf9', maxWidth: '600px' }}>
+                        A plataforma definitiva para colaboração de equipes e gestão inteligente.
+                    </p>
+                    <button onClick={() => onNavigate('explore')} className="btn-splash">
+                        Começar Agora
+                    </button>
                 </main>
             </div>
         </div>
