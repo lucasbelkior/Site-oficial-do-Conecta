@@ -219,7 +219,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                     <h2 className="text-xl font-bold text-slate-300 mb-2">Mensagens Privadas</h2>
                     <p className="max-w-xs text-center text-sm font-light">Selecione um colaborador ao lado.</p>
                     <button 
-                        className="md:hidden mt-4 bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-bold"
+                        className="md:hidden mt-4 bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg"
                         onClick={() => setShowMobileMenu(true)}
                     >
                         Ver Membros
@@ -233,7 +233,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                 <div className="flex-1 flex flex-col h-full">
                     {/* Mobile Profile Header with Back Button */}
                     <div className="md:hidden flex items-center p-4 border-b border-white/5 bg-[#0B0C15]">
-                        <button onClick={() => setSocialView('feed')} className="mr-3 text-slate-400">
+                        <button onClick={() => setSocialView('feed')} className="mr-3 text-slate-400 p-2 -ml-2">
                             <ArrowLeftIcon className="h-5 w-5" />
                         </button>
                         <h2 className="text-lg font-bold text-white">Perfil</h2>
@@ -250,15 +250,15 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         if (socialView === 'feed' && showFeed) {
             return (
                 <div className="h-full flex flex-col">
-                    <header className="p-4 md:p-6 border-b border-white/5 bg-[#0B0C15]/40 backdrop-blur-sm sticky top-0 z-10 flex justify-between items-center">
+                    <header className="p-4 md:p-6 border-b border-white/5 bg-[#0B0C15]/40 backdrop-blur-sm sticky top-0 z-20 flex justify-between items-center">
                         <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Social Feed</h2>
                          {/* Mobile Member Toggle */}
                          <button 
-                            className="md:hidden flex items-center space-x-2 bg-gradient-to-r from-blue-600/50 to-purple-600/50 border border-white/20 text-white px-3 py-1.5 rounded-lg shadow-lg hover:brightness-110 transition-all" 
+                            className="md:hidden flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 border border-white/20 text-white px-4 py-2 rounded-xl shadow-lg hover:brightness-110 transition-all z-50 active:scale-95" 
                             onClick={() => setShowMobileMenu(true)}
                         >
-                            <MessageSquareIcon className="h-4 w-4" />
-                            <span className="text-xs font-bold">Chats</span>
+                            <MessageSquareIcon className="h-5 w-5" />
+                            <span className="text-sm font-bold">Chats</span>
                         </button>
                     </header>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -356,8 +356,12 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { 
                             if (showFeed) { setProfileUser(otherUser); setSocialView('profile'); }
                         }}>
-                             {/* Mobile Back Button in Chat */}
-                            <button className="md:hidden mr-1 text-slate-400 p-2 -ml-2" onClick={(e) => { e.stopPropagation(); setSocialView('feed'); setActiveConversationUserId(null); }}>
+                             {/* Mobile Back Button in Chat - Returns to Feed, user can click "Chats" again */}
+                            <button className="md:hidden mr-1 text-slate-400 p-2 -ml-2 hover:text-white" onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setSocialView('feed'); 
+                                setActiveConversationUserId(null); 
+                            }}>
                                 <ArrowLeftIcon className="h-5 w-5" />
                             </button>
                             
@@ -449,18 +453,21 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         }
 
         return (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 bg-[#0B0C15]/50 p-6 text-center">
-                <div className="bg-[#151725]/50 p-8 rounded-full mb-6 border border-white/5 shadow-2xl">
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 bg-[#0B0C15]/50 p-6 text-center h-full">
+                <div className="bg-[#151725]/50 p-8 rounded-full mb-6 border border-white/5 shadow-2xl animate-pulse">
                      <MessageSquareIcon className="h-16 w-16 text-slate-600" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">{showFeed ? 'Mensagens Privadas' : 'Chat da Equipe'}</h2>
-                <p className="max-w-xs text-center text-sm font-light">Selecione um colaborador ao lado para iniciar uma conversa.</p>
+                <p className="max-w-xs text-center text-sm font-light mb-8">Nenhuma conversa selecionada.</p>
+                
+                {/* BIG PULSING BUTTON FOR MOBILE EMPTY STATE */}
                 <button 
-                    className="md:hidden mt-4 bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-bold"
+                    className="md:hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-[0_0_25px_rgba(147,51,234,0.4)] hover:scale-105 transition-transform animate-bounce"
                     onClick={() => setShowMobileMenu(true)}
                 >
-                    Ver Membros
+                    Iniciar Nova Conversa
                 </button>
+                <p className="md:hidden text-[10px] text-slate-500 mt-4 uppercase tracking-widest">Toque para ver contatos</p>
             </div>
         );
     };
@@ -472,19 +479,24 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         // REFACTORED LAYOUT: Using Flexbox for rock-solid stability instead of Grid
         <div className="h-full flex overflow-hidden text-white relative">
             
-            {/* 1. Left Sidebar: Navigation & Members */}
+            {/* 1. Left Sidebar: Navigation & Members - FIXED FULL SCREEN ON MOBILE */}
             <aside className={`
-                ${showMobileMenu ? 'absolute inset-0 z-50 flex' : 'hidden'} 
+                ${showMobileMenu ? 'fixed inset-0 z-[100] flex w-full h-full' : 'hidden'} 
                 md:flex md:static md:w-72 md:shrink-0
-                flex-col bg-[#0B0C15]/95 md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]
+                flex-col bg-[#0B0C15] md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]
             `}>
                 <div className="px-6 mb-8 flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">{!showFeed ? 'Conversas' : 'Social'}</h2>
-                        {showFeed && <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Team Interaction</p>}
+                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">Chats & Membros</h2>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Conecta Social</p>
                     </div>
-                    {/* Mobile Close Button */}
-                    <button className="md:hidden text-slate-400 p-2" onClick={() => setShowMobileMenu(false)}>✕</button>
+                    {/* Mobile Close Button - Enhanced */}
+                    <button 
+                        className="md:hidden text-slate-400 hover:text-white p-2 bg-white/5 rounded-full" 
+                        onClick={() => setShowMobileMenu(false)}
+                    >
+                        ✕
+                    </button>
                 </div>
                 
                 {showFeed && (
@@ -492,9 +504,12 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <button onClick={() => { setSocialView('feed'); setShowMobileMenu(false); }} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'feed' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
                             <HomeIcon className="h-5 w-5"/><span>Feed de Notícias</span>
                         </button>
-                        <button onClick={() => { setSocialView('chat'); setShowMobileMenu(false); }} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'chat' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
+                        
+                        {/* Hidden on mobile because the sidebar IS the message list */}
+                        <button onClick={() => { setSocialView('chat'); setShowMobileMenu(false); }} className={`hidden md:flex w-full items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'chat' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
                             <MessageSquareIcon className="h-5 w-5"/><span>Mensagens Diretas</span>
                         </button>
+                        
                         <button onClick={handleViewMyProfile} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${socialView === 'profile' && profileUser.id === currentUser.id ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'}`}>
                             <UserIcon className="h-5 w-5"/><span>Meu Perfil</span>
                         </button>
