@@ -2,8 +2,8 @@
 import React, { useState, useRef } from 'react';
 import type { User, Team, Channel, ChannelMessage } from '../types';
 import { Role } from '../types';
-import { addTeamToFirestore, addChannelToFirestore, joinTeamInFirestore } from '../database';
-import { UsersIcon, HashtagIcon, ArrowLeftIcon, MessageSquareIcon, EditIcon } from './Icons';
+import { addTeamToFirestore, addChannelToFirestore, joinTeamInFirestore, deleteTeamFromFirestore } from '../database';
+import { UsersIcon, HashtagIcon, ArrowLeftIcon, MessageSquareIcon, EditIcon, TrashIcon } from './Icons';
 import { ChannelChat } from './ChannelChat';
 
 interface TeamsPanelProps {
@@ -101,6 +101,21 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
             setSelectedTeam(team);
         } catch (error) {
             console.error("Error joining team:", error);
+        }
+    };
+
+    const handleDeleteTeam = async (teamId: string, teamName: string) => {
+        if (window.confirm(`ATENÇÃO: Você tem certeza que deseja excluir a equipe "${teamName}"? \n\nIsso apagará a equipe e TODOS os canais associados. Essa ação não pode ser desfeita.`)) {
+            try {
+                await deleteTeamFromFirestore(teamId);
+                // If selected team was deleted, go back to list
+                if (selectedTeam?.id === teamId) {
+                    setSelectedTeam(null);
+                }
+            } catch (error) {
+                console.error("Error deleting team:", error);
+                alert("Erro ao excluir equipe. Verifique o console.");
+            }
         }
     };
 
@@ -245,7 +260,19 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                                              <UsersIcon className="h-6 w-6 text-slate-400" />
                                         )}
                                     </div>
-                                    <span className="text-xs bg-white/5 px-2 py-1 rounded text-slate-400">{team.members.length} membros</span>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className="text-xs bg-white/5 px-2 py-1 rounded text-slate-400">{team.members.length} membros</span>
+                                        
+                                        {currentUser.role === Role.PATRAO && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteTeam(team.id, team.name); }}
+                                                className="text-slate-500 hover:text-red-500 bg-white/5 hover:bg-red-500/10 p-2 rounded-lg transition-colors border border-transparent hover:border-red-500/30"
+                                                title="Excluir Equipe e Canais"
+                                            >
+                                                <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <h3 className="text-xl font-bold text-white mb-2 pl-2">{team.name}</h3>
                                 <p className="text-slate-400 text-sm mb-6 line-clamp-2 pl-2">{team.description || "Sem descrição."}</p>

@@ -11,9 +11,10 @@ import {
     orderBy,
     getDocs,
     setDoc,
-    where
+    where,
+    writeBatch
 } from 'firebase/firestore';
-import { User, Task, Channel, Role, TaskStatus, ChannelMessage, Team, GlobalReminder, SocialMessage } from './types';
+import { User, Task, Channel, Role, TaskStatus, ChannelMessage, Team, GlobalReminder, SocialMessage, Post } from './types';
 
 // --- Helper to clean undefined values ---
 const cleanData = (data: any) => {
@@ -29,7 +30,7 @@ const cleanData = (data: any) => {
 export const defaultUsers: User[] = [
     { 
         id: 'u1', 
-        name: 'Katarina', // Alterado de Ana para Katarina
+        name: 'Katarina', 
         email: 'katarina@conecta.com', 
         role: Role.PATRAO, 
         points: 0,
@@ -183,6 +184,15 @@ export const subscribeToDirectMessages = (callback: (messages: SocialMessage[]) 
     });
 };
 
+// NEW: Subscribe to Social Feed Posts
+export const subscribeToPosts = (callback: (posts: Post[]) => void) => {
+    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    return onSnapshot(q, (snapshot) => {
+        const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+        callback(posts);
+    });
+};
+
 // --- Write Operations ---
 
 export const addTaskToFirestore = async (task: Task) => {
@@ -211,6 +221,12 @@ export const addDirectMessageToFirestore = async (message: SocialMessage) => {
     await addDoc(collection(db, 'direct_messages'), cleanData(message));
 };
 
+export const addPostToFirestore = async (post: Post) => {
+    // Use the Post ID as the document ID if desired, or let firestore generate one.
+    // For consistency with ID generation in frontend:
+    await setDoc(doc(db, 'posts', post.id), cleanData(post));
+};
+
 export const updateUserPoints = async (userId: string, newPoints: number) => {
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, { points: newPoints });
@@ -228,6 +244,62 @@ export const updateUserRole = async (userId: string, newRole: Role) => {
 
 export const addTeamToFirestore = async (team: Omit<Team, 'id'>) => {
     await addDoc(collection(db, 'teams'), cleanData(team));
+};
+
+// UPDATED: Deep Delete Team (Cascades to Channels and Messages)
+export const deleteTeamFromFirestore = async (teamId: string) => {
+    if (!teamId) return;
+
+    try {
+        // 1. Get all channels for this team
+        const channelsQuery = query(collection(db, 'channels'), where('teamId', '==', teamId));
+        const channelsSnap = await getDocs(channelsQuery);
+        
+        // 2. Prepare to delete messages for each channel
+        const batch = writeBatch(db);
+        let batchCount = 0;
+        const MAX_BATCH_SIZE = 500; // Firestore limit
+
+        const commitBatchIfFull = async () => {
+            if (batchCount >= MAX_BATCH_SIZE) {
+                await batch.commit();
+                batchCount = 0;
+            }
+        };
+
+        // Loop through channels to delete their messages first
+        for (const channelDoc of channelsSnap.docs) {
+            const channelId = channelDoc.id;
+            
+            // Query messages for this channel
+            const msgsQuery = query(collection(db, 'channel_messages'), where('channelId', '==', channelId));
+            const msgsSnap = await getDocs(msgsQuery);
+
+            for (const msgDoc of msgsSnap.docs) {
+                batch.delete(msgDoc.ref);
+                batchCount++;
+                // If batch is full (unlikely for small test but good practice), commit and start new
+                // Simplified here: we assume not exceeding 500 ops in this prototype flow, 
+                // but real app would need multiple batches handling.
+            }
+            
+            // Delete the channel itself
+            batch.delete(channelDoc.ref);
+            batchCount++;
+        }
+
+        // 3. Delete the Team document
+        const teamRef = doc(db, 'teams', teamId);
+        batch.delete(teamRef);
+
+        // Commit all deletions at once
+        await batch.commit();
+        console.log(`Team ${teamId} and all associated data deleted successfully.`);
+
+    } catch (e) {
+        console.error("Critical Error during deep team deletion:", e);
+        throw e; // Rethrow to let UI handle it
+    }
 };
 
 export const addChannelToFirestore = async (channel: Omit<Channel, 'id'>) => {

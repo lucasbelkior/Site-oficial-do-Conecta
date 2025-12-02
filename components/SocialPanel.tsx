@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type { User, Conversation, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
 import { Role } from '../types';
-import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon, UsersIcon } from './Icons';
+import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon, UsersIcon, LogOutIcon } from './Icons';
 import { CallModal } from './CallModal';
 import { UserProfile } from './UserProfile';
 
@@ -17,11 +17,12 @@ interface SocialPanelProps {
     showFeed?: boolean; 
     directMessages: SocialMessage[]; 
     onSendDirectMessage: (text: string, receiverId: string, attachments?: Attachment[]) => void;
+    onLogout?: () => void; // New Prop
 }
 
 const MAX_POST_LENGTH = 280;
 
-export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, teams, onCreatePost, showFeed = true, directMessages, onSendDirectMessage }) => {
+export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, teams, onCreatePost, showFeed = true, directMessages, onSendDirectMessage, onLogout }) => {
     const [socialView, setSocialView] = useState<'feed' | 'chat' | 'profile'>(showFeed ? 'feed' : 'chat');
     const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
     const [showMobileMenu, setShowMobileMenu] = useState(false); // New: Mobile Menu Toggle
@@ -425,7 +426,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             
             {/* Left Column: Navigation & Members */}
             {/* On Mobile: This is a full-screen overlay menu */}
-            <aside className={`${showMobileMenu ? 'fixed inset-0 z-50 flex flex-col' : 'hidden'} md:flex md:static bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]`}>
+            <aside className={`${showMobileMenu ? 'fixed inset-0 z-50 flex flex-col' : 'hidden'} md:flex md:static bg-[#0B0C15]/95 md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]`}>
                 <div className="px-6 mb-8 flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">Social</h2>
@@ -474,6 +475,16 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <p className="text-xs text-slate-600 italic px-2">Você ainda não está em nenhuma equipe com outros membros.</p>
                     )}
                 </div>
+
+                {/* Mobile Specific Logout Button at bottom of menu */}
+                {onLogout && (
+                    <div className="md:hidden p-4 border-t border-white/10 mt-2">
+                        <button onClick={onLogout} className="w-full flex items-center justify-center space-x-2 text-red-400 hover:bg-red-500/10 p-3 rounded-xl transition-colors">
+                            <LogOutIcon className="h-5 w-5" />
+                            <span className="font-bold">Sair da Conta</span>
+                        </button>
+                    </div>
+                )}
             </aside>
 
             {/* Middle Column: Main Content */}

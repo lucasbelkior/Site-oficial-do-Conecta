@@ -21,6 +21,8 @@ import {
     subscribeToTeams, 
     subscribeToReminders, 
     subscribeToDirectMessages,
+    subscribeToPosts,
+    addPostToFirestore,
     addTaskToFirestore, 
     updateTaskInFirestore, 
     deleteTaskFromFirestore,
@@ -28,7 +30,6 @@ import {
     addDirectMessageToFirestore,
     updateUserPoints
 } from '../database';
-import { initialPosts } from '../socialDatabase';
 
 interface MainLayoutProps {
     currentUser: User;
@@ -44,6 +45,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const [teams, setTeams] = useState<Team[]>([]);
     const [reminders, setReminders] = useState<GlobalReminder[]>([]); 
     const [directMessages, setDirectMessages] = useState<SocialMessage[]>([]);
+    const [posts, setPosts] = useState<Post[]>([]);
 
     const [messages, setMessages] = useState<Message[]>([
       { id: 1, text: `Olá ${currentUser.name}! Sou o assistente da Conecta. Como posso ajudar a equipe hoje?`, sender: MessageSender.ASSISTANT}
@@ -55,7 +57,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
     const [viewingMember, setViewingMember] = useState<User | null>(null);
     
-    const [posts, setPosts] = useState<Post[]>(initialPosts);
     const [techNews, setTechNews] = useState<TechNewsItem[]>([]);
     const [isLoadingNews, setIsLoadingNews] = useState(false);
 
@@ -69,6 +70,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
         const unsubTeams = subscribeToTeams(setTeams);
         const unsubReminders = subscribeToReminders(setReminders);
         const unsubDirectMessages = subscribeToDirectMessages(setDirectMessages);
+        const unsubPosts = subscribeToPosts(setPosts);
 
         return () => {
             unsubTasks();
@@ -77,6 +79,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
             unsubTeams();
             unsubReminders();
             unsubDirectMessages();
+            unsubPosts();
         };
     }, []);
 
@@ -323,14 +326,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                     showFeed={!isBoss}
                     directMessages={directMessages}
                     onSendDirectMessage={handleSendDirectMessage}
-                    onCreatePost={(text) => {
+                    onLogout={onLogout} // Passing Logout to Social Panel for mobile menu
+                    onCreatePost={async (text) => {
                         const newPost: Post = {
                             id: `p-${Date.now()}`,
                             authorId: currentUser.id,
                             text: text,
                             timestamp: new Date().toISOString()
                         };
-                        setPosts(prev => [newPost, ...prev]);
+                        await addPostToFirestore(newPost);
                     }}
                 />
             );
@@ -357,18 +361,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                 <Header onLogoClick={handleLogoClick} />
             </div>
             
-            {/* Mobile Header (simplified) */}
-             <div className="md:hidden h-14 border-b border-white/5 bg-[#0B0C15]/80 backdrop-blur-xl flex items-center justify-center relative z-20 sticky top-0">
+            {/* Mobile Header (Fixed) - Fixing the scroll bug */}
+             <div className="md:hidden h-14 border-b border-white/5 bg-[#0B0C15]/95 backdrop-blur-xl flex items-center justify-center fixed top-0 w-full z-50 shadow-lg">
                 <img src="https://i.imgur.com/syClG5w.png" alt="Conecta" className="h-6 opacity-90 drop-shadow-[0_0_8px_rgba(91,197,242,0.5)]" />
                 <button 
                     onClick={onLogout} 
-                    className="absolute right-4 text-xs text-slate-400 border border-white/10 px-3 py-1.5 rounded-full hover:bg-white/5 transition-colors"
+                    className="absolute right-4 text-xs text-slate-400 border border-white/10 px-3 py-1.5 rounded-full hover:bg-white/5 transition-colors z-50 bg-[#0B0C15]"
                 >
                     Sair
                 </button>
             </div>
 
-            <div className="flex flex-1 overflow-hidden relative">
+            <div className="flex flex-1 overflow-hidden relative md:pt-0 pt-14"> {/* Added PT-14 for mobile to account for fixed header */}
                 {/* Desktop/Tablet Sidebar - Hidden on Mobile */}
                 <div className="hidden md:flex relative z-30">
                     <Sidebar 
