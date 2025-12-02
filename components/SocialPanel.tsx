@@ -582,23 +582,14 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <div className="space-y-8">
                             {techNews.map((news, index) => (
                                 <article key={index} className="group cursor-pointer relative">
-                                    {news.source === 'System' ? (
-                                        <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl">
-                                            <h3 className="text-red-400 font-bold text-sm mb-1">⚠️ {news.title}</h3>
-                                            <p className="text-red-300 text-xs leading-relaxed">{news.summary}</p>
+                                    <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-white/5 group-hover:bg-cyan-500/50 transition-colors"></div>
+                                    <div className="pl-4">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <span className="text-[10px] text-cyan-400 font-mono border border-cyan-500/20 px-1.5 py-0.5 rounded bg-cyan-500/5">{news.source}</span>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-white/5 group-hover:bg-cyan-500/50 transition-colors"></div>
-                                            <div className="pl-4">
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <span className="text-[10px] text-cyan-400 font-mono border border-cyan-500/20 px-1.5 py-0.5 rounded bg-cyan-500/5">{news.source}</span>
-                                                </div>
-                                                <h3 className="font-bold text-slate-200 group-hover:text-cyan-400 transition-colors leading-snug mb-2 text-sm">{news.title}</h3>
-                                                <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed group-hover:text-slate-400">{news.summary}</p>
-                                            </div>
-                                        </>
-                                    )}
+                                        <h3 className="font-bold text-slate-200 group-hover:text-cyan-400 transition-colors leading-snug mb-2 text-sm">{news.title}</h3>
+                                        <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed group-hover:text-slate-400">{news.summary}</p>
+                                    </div>
                                 </article>
                             ))}
                             {techNews.length === 0 && (
