@@ -23,6 +23,7 @@ interface SocialPanelProps {
 const MAX_POST_LENGTH = 280;
 
 export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers, posts, techNews, isLoadingNews, teams, onCreatePost, showFeed = true, directMessages, onSendDirectMessage, onLogout }) => {
+    // If showFeed is false (Boss), strictly initialize to 'chat'
     const [socialView, setSocialView] = useState<'feed' | 'chat' | 'profile'>(showFeed ? 'feed' : 'chat');
     const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
     const [showMobileMenu, setShowMobileMenu] = useState(false); // New: Mobile Menu Toggle
@@ -41,6 +42,13 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
+    // Force redirect to chat if showFeed becomes false dynamically or if somehow set to feed
+    useEffect(() => {
+        if (!showFeed && socialView === 'feed') {
+            setSocialView('chat');
+        }
+    }, [showFeed, socialView]);
+
     const teamMembers = useMemo(() => {
         if (currentUser.role === Role.PATRAO) {
              return allUsers.filter(u => u.id !== currentUser.id);
@@ -196,6 +204,22 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     };
 
     const renderMainContent = () => {
+        // STRICT SAFETY CHECK: If showFeed is false, NEVER render profile or feed.
+        if (!showFeed && (socialView === 'feed' || socialView === 'profile')) {
+             return (
+                 <div className="flex-1 flex flex-col items-center justify-center text-slate-500 bg-[#0B0C15]/50 p-6 text-center">
+                    <h2 className="text-xl font-bold text-slate-300 mb-2">Mensagens Privadas</h2>
+                    <p className="max-w-xs text-center text-sm font-light">Selecione um colaborador ao lado.</p>
+                    <button 
+                        className="md:hidden mt-4 bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-bold"
+                        onClick={() => setShowMobileMenu(true)}
+                    >
+                        Ver Membros
+                    </button>
+                </div>
+             );
+        }
+
         if (socialView === 'profile') {
             return (
                 <UserProfile 
@@ -206,7 +230,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             );
         }
 
-        if (socialView === 'feed') {
+        if (socialView === 'feed' && showFeed) {
             return (
                 <div className="h-full flex flex-col">
                     <header className="p-4 md:p-6 border-b border-white/5 bg-[#0B0C15]/40 backdrop-blur-sm sticky top-0 z-10 flex justify-between items-center">
@@ -218,6 +242,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                     </header>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="p-4 md:p-6 max-w-2xl mx-auto w-full">
+                            
+                            {/* POST INPUT */}
                             <div className="bg-[#151725]/60 backdrop-blur-md border border-white/5 rounded-[1.5rem] p-5 mb-8 shadow-xl hover:border-white/10 transition-colors relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-50"></div>
                                 <div className="flex space-x-4">
@@ -249,6 +275,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                                     </div>
                                 </div>
                             </div>
+
                             <ul className="space-y-6">
                                 {posts.map(post => {
                                     const author = userMap.get(post.authorId);
@@ -402,11 +429,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-500 bg-[#0B0C15]/50 p-6 text-center">
-                <div className="bg-[#151725]/50 p-8 rounded-full mb-6 border border-white/5 shadow-2xl">
-                     <MessageSquareIcon className="h-16 w-16 text-slate-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">{showFeed ? 'Social Hub' : 'Chat da Equipe'}</h2>
-                <p className="max-w-xs text-center text-sm font-light">Selecione um membro no menu para iniciar.</p>
+                <h2 className="text-xl font-bold text-slate-300 mb-2">Mensagens Privadas</h2>
+                <p className="max-w-xs text-center text-sm font-light">Selecione um colaborador ao lado.</p>
                 <button 
                     className="md:hidden mt-4 bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-bold"
                     onClick={() => setShowMobileMenu(true)}
@@ -429,8 +453,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             <aside className={`${showMobileMenu ? 'fixed inset-0 z-50 flex flex-col' : 'hidden'} md:flex md:static bg-[#0B0C15]/95 md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]`}>
                 <div className="px-6 mb-8 flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">Social</h2>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Team Interaction</p>
+                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">{!showFeed ? 'Mensagens' : 'Social'}</h2>
+                        {showFeed && <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Team Interaction</p>}
                     </div>
                     {/* Mobile Close Button */}
                     <button className="md:hidden text-slate-400 p-2" onClick={() => setShowMobileMenu(false)}>✕</button>

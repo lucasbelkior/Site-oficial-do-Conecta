@@ -112,6 +112,7 @@ export const TeamsPanel: React.FC<TeamsPanelProps> = ({ currentUser, allUsers, a
                 if (selectedTeam?.id === teamId) {
                     setSelectedTeam(null);
                 }
+                alert("Equipe excluída com sucesso!");
             } catch (error) {
                 console.error("Error deleting team:", error);
                 alert("Erro ao excluir equipe. Verifique o console.");

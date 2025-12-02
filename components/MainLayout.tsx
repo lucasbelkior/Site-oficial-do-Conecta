@@ -85,6 +85,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
 
     useEffect(() => {
         const fetchNews = async () => {
+            // Fetch news only if viewing social and the user allows feed (Members)
+            // Or if we want Boss to see news but not feed? The prompt implies hiding the "tweet" part.
+            // If we hide feed, SocialPanel hides the news column too.
             if (view === 'social' && currentUser.role !== Role.PATRAO && techNews.length === 0) {
                 setIsLoadingNews(true);
                 try {
@@ -314,7 +317,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
             );
         }
         if (view === 'social') {
-            const isBoss = currentUser.role === Role.PATRAO;
+            // Boss can NO LONGER see feed. Only Direct Messages.
             return (
                 <SocialPanel 
                     currentUser={currentUser}
@@ -323,10 +326,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                     techNews={techNews}
                     isLoadingNews={isLoadingNews}
                     teams={teams}
-                    showFeed={!isBoss}
+                    showFeed={currentUser.role !== Role.PATRAO} // Only members see the feed/posts
                     directMessages={directMessages}
                     onSendDirectMessage={handleSendDirectMessage}
-                    onLogout={onLogout} // Passing Logout to Social Panel for mobile menu
+                    onLogout={onLogout}
                     onCreatePost={async (text) => {
                         const newPost: Post = {
                             id: `p-${Date.now()}`,
