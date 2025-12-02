@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type { User, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
 import { Role } from '../types';
-import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon, UsersIcon, LogOutIcon } from './Icons';
+import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon, UsersIcon, LogOutIcon, ArrowLeftIcon } from './Icons';
 import { CallModal } from './CallModal';
 import { UserProfile } from './UserProfile';
 
@@ -230,11 +230,20 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
         if (socialView === 'profile') {
             return (
-                <UserProfile 
-                    user={profileUser} 
-                    posts={posts} 
-                    isOwnProfile={profileUser.id === currentUser.id} 
-                />
+                <div className="flex-1 flex flex-col h-full">
+                    {/* Mobile Profile Header with Back Button */}
+                    <div className="md:hidden flex items-center p-4 border-b border-white/5 bg-[#0B0C15]">
+                        <button onClick={() => setSocialView('feed')} className="mr-3 text-slate-400">
+                            <ArrowLeftIcon className="h-5 w-5" />
+                        </button>
+                        <h2 className="text-lg font-bold text-white">Perfil</h2>
+                    </div>
+                    <UserProfile 
+                        user={profileUser} 
+                        posts={posts} 
+                        isOwnProfile={profileUser.id === currentUser.id} 
+                    />
+                </div>
             );
         }
 
@@ -244,8 +253,12 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                     <header className="p-4 md:p-6 border-b border-white/5 bg-[#0B0C15]/40 backdrop-blur-sm sticky top-0 z-10 flex justify-between items-center">
                         <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Social Feed</h2>
                          {/* Mobile Member Toggle */}
-                         <button className="md:hidden p-2 bg-white/5 rounded-lg text-slate-400" onClick={() => setShowMobileMenu(!showMobileMenu)}>
-                            <UsersIcon className="h-5 w-5" />
+                         <button 
+                            className="md:hidden flex items-center space-x-2 bg-gradient-to-r from-blue-600/50 to-purple-600/50 border border-white/20 text-white px-3 py-1.5 rounded-lg shadow-lg hover:brightness-110 transition-all" 
+                            onClick={() => setShowMobileMenu(true)}
+                        >
+                            <MessageSquareIcon className="h-4 w-4" />
+                            <span className="text-xs font-bold">Chats</span>
                         </button>
                     </header>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -284,7 +297,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                                 </div>
                             </div>
 
-                            <ul className="space-y-6">
+                            <ul className="space-y-6 pb-20 md:pb-0">
                                 {posts.map(post => {
                                     const author = userMap.get(post.authorId);
                                     return (
@@ -344,8 +357,8 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                             if (showFeed) { setProfileUser(otherUser); setSocialView('profile'); }
                         }}>
                              {/* Mobile Back Button in Chat */}
-                            <button className="md:hidden mr-1 text-slate-400" onClick={() => {setSocialView('feed'); setActiveConversationUserId(null);}}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            <button className="md:hidden mr-1 text-slate-400 p-2 -ml-2" onClick={(e) => { e.stopPropagation(); setSocialView('feed'); setActiveConversationUserId(null); }}>
+                                <ArrowLeftIcon className="h-5 w-5" />
                             </button>
                             
                             <div className="h-8 w-8 md:h-10 md:w-10 rounded-xl bg-slate-700 flex items-center justify-center text-white font-bold overflow-hidden">
