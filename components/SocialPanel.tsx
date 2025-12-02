@@ -49,22 +49,33 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
         }
     }, [showFeed, socialView]);
 
-    const teamMembers = useMemo(() => {
-        if (currentUser.role === Role.PATRAO) {
-             return allUsers.filter(u => u.id !== currentUser.id);
-        }
-        const myTeamIds = teams
-            .filter(t => t.members.includes(currentUser.id))
-            .map(t => t.id);
-            
-        return allUsers.filter(u => {
-            if (u.id === currentUser.id) return false; 
-            const userTeams = teams.filter(t => t.members.includes(u.id));
-            return userTeams.some(t => myTeamIds.includes(t.id));
-        });
-    }, [allUsers, teams, currentUser]);
-
     const userMap = useMemo(() => new Map(allUsers.map(user => [user.id, user])), [allUsers]);
+
+    // --- FIX: Logic to separate Recent Chats vs All Contacts ---
+    
+    // 1. Identify Recent Contacts based on message history
+    const recentContacts = useMemo(() => {
+        const contactIds = new Set<string>();
+        // Sort messages by newest first
+        const sortedMsgs = [...directMessages].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        sortedMsgs.forEach(msg => {
+            if (msg.senderId === currentUser.id) contactIds.add(msg.receiverId);
+            if (msg.receiverId === currentUser.id) contactIds.add(msg.senderId);
+        });
+
+        return Array.from(contactIds)
+            .map(id => userMap.get(id))
+            .filter((u): u is User => !!u);
+    }, [directMessages, currentUser.id, userMap]);
+
+    // 2. Identify Other Contacts (Everyone else in the company)
+    // We removed the strict Team filter to ensure users can always find someone to talk to.
+    const otherContacts = useMemo(() => {
+        const recentIds = new Set(recentContacts.map(u => u.id));
+        return allUsers.filter(u => u.id !== currentUser.id && !recentIds.has(u.id));
+    }, [allUsers, currentUser.id, recentContacts]);
+
 
     // Derive active conversation messages from directMessages prop
     const activeMessages = useMemo(() => {
@@ -446,6 +457,24 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     const isProfileView = socialView === 'profile';
     const isChatView = socialView === 'chat';
+    
+    // Member list item renderer
+    const renderMemberItem = (member: User) => (
+        <li key={member.id}>
+            <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && activeConversationUserId === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                <div className="relative mr-3">
+                    <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
+                        {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
+                </div>
+                <div className="flex flex-col">
+                    <span className={`text-sm font-medium ${socialView === 'chat' && activeConversationUserId === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
+                    <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
+                </div>
+            </button>
+        </li>
+    );
 
     return (
         // Mobile Layout: Flex Column | Desktop Layout: Grid
@@ -479,30 +508,30 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                     </nav>
                 )}
 
-                <div className="flex-1 overflow-y-auto px-4">
-                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Equipe</h3>
-                    {teamMembers.length > 0 ? (
-                        <ul className="space-y-1">
-                            {teamMembers.map(member => (
-                                <li key={member.id}>
-                                    <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && activeConversationUserId === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-                                        <div className="relative mr-3">
-                                            <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
-                                                {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
-                                            </div>
-                                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className={`text-sm font-medium ${socialView === 'chat' && activeConversationUserId === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
-                                            <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
-                                        </div>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-xs text-slate-600 italic px-2">Você ainda não está em nenhuma equipe com outros membros.</p>
+                <div className="flex-1 overflow-y-auto px-4 space-y-6">
+                    {/* RECENT CHATS SECTION */}
+                    {recentContacts.length > 0 && (
+                        <div>
+                             <h3 className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-2 px-2">Conversas Recentes</h3>
+                             <ul className="space-y-1">
+                                {recentContacts.map(member => renderMemberItem(member))}
+                             </ul>
+                        </div>
                     )}
+
+                    {/* ALL CONTACTS SECTION */}
+                    <div>
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-2">Outros Membros</h3>
+                        {otherContacts.length > 0 ? (
+                            <ul className="space-y-1">
+                                {otherContacts.map(member => renderMemberItem(member))}
+                            </ul>
+                        ) : (
+                            <p className="text-xs text-slate-600 italic px-2">
+                                {recentContacts.length > 0 ? 'Todos os membros estão em recentes.' : 'Nenhum outro membro encontrado.'}
+                            </p>
+                        )}
+                    </div>
                 </div>
 
                 {/* Mobile Specific Logout Button at bottom of menu */}
@@ -544,14 +573,23 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <div className="space-y-8">
                             {techNews.map((news, index) => (
                                 <article key={index} className="group cursor-pointer relative">
-                                    <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-white/5 group-hover:bg-cyan-500/50 transition-colors"></div>
-                                    <div className="pl-4">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <span className="text-[10px] text-cyan-400 font-mono border border-cyan-500/20 px-1.5 py-0.5 rounded bg-cyan-500/5">{news.source}</span>
+                                    {news.source === 'System' ? (
+                                        <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl">
+                                            <h3 className="text-red-400 font-bold text-sm mb-1">⚠️ {news.title}</h3>
+                                            <p className="text-red-300 text-xs leading-relaxed">{news.summary}</p>
                                         </div>
-                                        <h3 className="font-bold text-slate-200 group-hover:text-cyan-400 transition-colors leading-snug mb-2 text-sm">{news.title}</h3>
-                                        <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed group-hover:text-slate-400">{news.summary}</p>
-                                    </div>
+                                    ) : (
+                                        <>
+                                            <div className="absolute -left-3 top-0 bottom-0 w-0.5 bg-white/5 group-hover:bg-cyan-500/50 transition-colors"></div>
+                                            <div className="pl-4">
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <span className="text-[10px] text-cyan-400 font-mono border border-cyan-500/20 px-1.5 py-0.5 rounded bg-cyan-500/5">{news.source}</span>
+                                                </div>
+                                                <h3 className="font-bold text-slate-200 group-hover:text-cyan-400 transition-colors leading-snug mb-2 text-sm">{news.title}</h3>
+                                                <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed group-hover:text-slate-400">{news.summary}</p>
+                                            </div>
+                                        </>
+                                    )}
                                 </article>
                             ))}
                             {techNews.length === 0 && (
