@@ -429,8 +429,11 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-500 bg-[#0B0C15]/50 p-6 text-center">
-                <h2 className="text-xl font-bold text-slate-300 mb-2">Mensagens Privadas</h2>
-                <p className="max-w-xs text-center text-sm font-light">Selecione um colaborador ao lado.</p>
+                <div className="bg-[#151725]/50 p-8 rounded-full mb-6 border border-white/5 shadow-2xl">
+                     <MessageSquareIcon className="h-16 w-16 text-slate-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">{showFeed ? 'Mensagens Privadas' : 'Chat da Equipe'}</h2>
+                <p className="max-w-xs text-center text-sm font-light">Selecione um colaborador ao lado para iniciar uma conversa.</p>
                 <button 
                     className="md:hidden mt-4 bg-purple-600 text-white px-6 py-2 rounded-xl text-sm font-bold"
                     onClick={() => setShowMobileMenu(true)}
@@ -446,14 +449,16 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     return (
         // Mobile Layout: Flex Column | Desktop Layout: Grid
-        <div className={`h-full flex flex-col md:grid ${isProfileView || !showFeed ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-[280px_1fr_340px]'} text-white`}>
+        // CORRECTION: Ensure that if we are in Chat View, we only use 2 columns (Sidebar + Chat) so Chat expands.
+        // If we are in Feed View (and not Boss), we use 3 columns (Sidebar + Feed + News).
+        <div className={`h-full flex flex-col md:grid ${isProfileView || isChatView || !showFeed ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-[280px_1fr_340px]'} text-white`}>
             
             {/* Left Column: Navigation & Members */}
             {/* On Mobile: This is a full-screen overlay menu */}
             <aside className={`${showMobileMenu ? 'fixed inset-0 z-50 flex flex-col' : 'hidden'} md:flex md:static bg-[#0B0C15]/95 md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]`}>
                 <div className="px-6 mb-8 flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">{!showFeed ? 'Mensagens' : 'Social'}</h2>
+                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">{!showFeed ? 'Conversas' : 'Social'}</h2>
                         {showFeed && <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Team Interaction</p>}
                     </div>
                     {/* Mobile Close Button */}
@@ -517,6 +522,7 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
             </main>
 
             {/* Right Column: News (Desktop Only for now) */}
+            {/* Condition updated: If NOT profile AND NOT chat AND feed is shown, show news. */}
             {!isProfileView && !isChatView && showFeed && (
                 <aside className="hidden lg:block bg-[#0B0C15]/80 backdrop-blur-2xl border-l border-white/5 p-6 overflow-y-auto z-10 shadow-[-5px_0_30px_rgba(0,0,0,0.2)]">
                     <div className="flex items-center space-x-2 mb-8 bg-amber-500/5 p-3 rounded-xl border border-amber-500/10">
