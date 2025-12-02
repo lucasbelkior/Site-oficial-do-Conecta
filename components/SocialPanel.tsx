@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import type { User, Conversation, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
+import type { User, SocialMessage, Post, TechNewsItem, Attachment, Team } from '../types';
 import { Role } from '../types';
 import { UserIcon, SendIcon, PhoneIcon, VideoIcon, MessageSquareIcon, HomeIcon, PaperclipIcon, MicIcon, StopIcon, SparklesIcon, UsersIcon, LogOutIcon } from './Icons';
 import { CallModal } from './CallModal';
@@ -51,8 +51,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
 
     const userMap = useMemo(() => new Map(allUsers.map(user => [user.id, user])), [allUsers]);
 
-    // --- FIX: Logic to separate Recent Chats vs All Contacts ---
-    
     // 1. Identify Recent Contacts based on message history
     const recentContacts = useMemo(() => {
         const contactIds = new Set<string>();
@@ -70,7 +68,6 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     }, [directMessages, currentUser.id, userMap]);
 
     // 2. Identify Other Contacts (Everyone else in the company)
-    // We removed the strict Team filter to ensure users can always find someone to talk to.
     const otherContacts = useMemo(() => {
         const recentIds = new Set(recentContacts.map(u => u.id));
         return allUsers.filter(u => u.id !== currentUser.id && !recentIds.has(u.id));
@@ -458,33 +455,16 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
     const isProfileView = socialView === 'profile';
     const isChatView = socialView === 'chat';
     
-    // Member list item renderer
-    const renderMemberItem = (member: User) => (
-        <li key={member.id}>
-            <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && activeConversationUserId === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-                <div className="relative mr-3">
-                    <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
-                        {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
-                    </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
-                </div>
-                <div className="flex flex-col">
-                    <span className={`text-sm font-medium ${socialView === 'chat' && activeConversationUserId === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
-                    <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
-                </div>
-            </button>
-        </li>
-    );
-
     return (
-        // Mobile Layout: Flex Column | Desktop Layout: Grid
-        // CORRECTION: Ensure that if we are in Chat View, we only use 2 columns (Sidebar + Chat) so Chat expands.
-        // If we are in Feed View (and not Boss), we use 3 columns (Sidebar + Feed + News).
-        <div className={`h-full flex flex-col md:grid ${isProfileView || isChatView || !showFeed ? 'md:grid-cols-[280px_1fr]' : 'md:grid-cols-[280px_1fr_340px]'} text-white`}>
+        // REFACTORED LAYOUT: Using Flexbox for rock-solid stability instead of Grid
+        <div className="h-full flex overflow-hidden text-white relative">
             
-            {/* Left Column: Navigation & Members */}
-            {/* On Mobile: This is a full-screen overlay menu */}
-            <aside className={`${showMobileMenu ? 'fixed inset-0 z-50 flex flex-col' : 'hidden'} md:flex md:static bg-[#0B0C15]/95 md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]`}>
+            {/* 1. Left Sidebar: Navigation & Members */}
+            <aside className={`
+                ${showMobileMenu ? 'absolute inset-0 z-50 flex' : 'hidden'} 
+                md:flex md:static md:w-72 md:shrink-0
+                flex-col bg-[#0B0C15]/95 md:bg-[#0B0C15]/80 md:backdrop-blur-2xl border-r border-white/5 pt-8 shadow-[5px_0_30px_rgba(0,0,0,0.2)]
+            `}>
                 <div className="px-6 mb-8 flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">{!showFeed ? 'Conversas' : 'Social'}</h2>
@@ -514,7 +494,22 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <div>
                              <h3 className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mb-2 px-2">Conversas Recentes</h3>
                              <ul className="space-y-1">
-                                {recentContacts.map(member => renderMemberItem(member))}
+                                {recentContacts.map(member => (
+                                    <li key={member.id}>
+                                        <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && activeConversationUserId === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                                            <div className="relative mr-3">
+                                                <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
+                                                    {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
+                                                </div>
+                                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
+                                            </div>
+                                            <div className="flex flex-col overflow-hidden">
+                                                <span className={`text-sm font-medium truncate ${socialView === 'chat' && activeConversationUserId === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
+                                                <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))}
                              </ul>
                         </div>
                     )}
@@ -524,7 +519,22 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-2">Outros Membros</h3>
                         {otherContacts.length > 0 ? (
                             <ul className="space-y-1">
-                                {otherContacts.map(member => renderMemberItem(member))}
+                                {otherContacts.map(member => (
+                                    <li key={member.id}>
+                                        <button onClick={() => handleMemberSelect(member)} className={`w-full flex items-center p-2.5 rounded-xl text-left transition-all group ${socialView === 'chat' && activeConversationUserId === member.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                                            <div className="relative mr-3">
+                                                <div className="h-10 w-10 rounded-xl bg-[#151725] border border-white/10 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-purple-500/30 group-hover:text-purple-400 transition-colors overflow-hidden">
+                                                    {member.avatarUrl ? <img src={member.avatarUrl} className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
+                                                </div>
+                                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-[3px] border-[#0B0C15]"></div>
+                                            </div>
+                                            <div className="flex flex-col overflow-hidden">
+                                                <span className={`text-sm font-medium truncate ${socialView === 'chat' && activeConversationUserId === member.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{member.name}</span>
+                                                <span className="text-[9px] text-slate-600 truncate">{member.jobTitle || 'Membro'}</span>
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))}
                             </ul>
                         ) : (
                             <p className="text-xs text-slate-600 italic px-2">
@@ -545,15 +555,14 @@ export const SocialPanel: React.FC<SocialPanelProps> = ({ currentUser, allUsers,
                 )}
             </aside>
 
-            {/* Middle Column: Main Content */}
-            <main className={`flex-1 flex flex-col relative overflow-hidden bg-[#0B0C15]/50 ${showMobileMenu ? 'hidden md:flex' : 'flex'}`}>
+            {/* 2. Middle Column: Main Content (Feed/Chat/Profile) */}
+            <main className="flex-1 flex flex-col min-w-0 bg-[#0B0C15]/50 relative overflow-hidden">
                 {renderMainContent()}
             </main>
 
-            {/* Right Column: News (Desktop Only for now) */}
-            {/* Condition updated: If NOT profile AND NOT chat AND feed is shown, show news. */}
+            {/* 3. Right Column: News (Desktop Only) */}
             {!isProfileView && !isChatView && showFeed && (
-                <aside className="hidden lg:block bg-[#0B0C15]/80 backdrop-blur-2xl border-l border-white/5 p-6 overflow-y-auto z-10 shadow-[-5px_0_30px_rgba(0,0,0,0.2)]">
+                <aside className="hidden lg:block w-80 shrink-0 bg-[#0B0C15]/80 backdrop-blur-2xl border-l border-white/5 p-6 overflow-y-auto shadow-[-5px_0_30px_rgba(0,0,0,0.2)]">
                     <div className="flex items-center space-x-2 mb-8 bg-amber-500/5 p-3 rounded-xl border border-amber-500/10">
                         <SparklesIcon className="h-5 w-5 text-amber-400" />
                         <h2 className="text-sm font-bold text-amber-100 uppercase tracking-wide">Trending Tech</h2>
