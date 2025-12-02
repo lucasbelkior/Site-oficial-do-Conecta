@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SparklesIcon, CalendarIcon, MessageSquareIcon, UsersIcon, DashboardIcon, EditIcon } from './Icons';
+import { SparklesIcon, CalendarIcon, MessageSquareIcon, UsersIcon, DashboardIcon, EditIcon, GamepadIcon } from './Icons';
 import type { User } from '../types';
 import { Role } from '../types';
 
@@ -30,6 +30,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ view, currentUser, onToggl
             <button onClick={() => onToggleView('social')} className={navItemClass(view === 'social')}>
                 <MessageSquareIcon className="h-5 w-5" />
                 <span className="text-[9px] font-medium whitespace-nowrap">{currentUser.role === Role.PATRAO ? 'Chat' : 'Social'}</span>
+            </button>
+
+             {/* Quiz Button for Mobile */}
+             <button onClick={() => onToggleView('quiz')} className={navItemClass(view === 'quiz')}>
+                <GamepadIcon className="h-5 w-5" />
+                <span className="text-[9px] font-medium whitespace-nowrap">Quiz</span>
             </button>
 
             <button onClick={() => onToggleView('calendar')} className={navItemClass(view === 'calendar')}>

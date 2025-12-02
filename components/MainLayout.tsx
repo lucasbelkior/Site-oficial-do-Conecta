@@ -11,6 +11,7 @@ import { TeamsPanel } from './TeamsPanel';
 import { PlanningPanel } from './PlanningPanel'; 
 import { CalendarView } from './CalendarView';
 import { ChannelChat } from './ChannelChat';
+import { QuizPanel } from './QuizPanel'; // New Import
 import { processCommand, getTechNews } from '../services/geminiService';
 import type { User, Task, Channel, Message, GeminiResponse, Post, TechNewsItem, ChannelMessage, Team, Attachment, GlobalReminder, SocialMessage } from '../types';
 import { TaskStatus, MessageSender, Role } from '../types';
@@ -53,7 +54,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const [isLoading, setIsLoading] = useState(false);
     const [chatInputText, setChatInputText] = useState('');
     
-    const [view, setView] = useState<'assistant' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams' | 'planning'>('assistant');
+    // Updated View Type to include 'quiz'
+    const [view, setView] = useState<'assistant' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams' | 'planning' | 'quiz'>('assistant');
     const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
     const [viewingMember, setViewingMember] = useState<User | null>(null);
     
@@ -232,6 +234,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const handleTogglePlanningView = () => { setView('planning'); setActiveChannelId(null); };
     const handleToggleAssistantView = () => { setView('assistant'); setViewingMember(null); setActiveChannelId(null); };
     const handleToggleCalendarView = () => { setView('calendar'); setViewingMember(null); setActiveChannelId(null); };
+    const handleToggleQuizView = () => { setView('quiz'); setActiveChannelId(null); };
 
     const handleSelectChannel = (channelId: string) => { setView('channel'); setActiveChannelId(channelId); setViewingMember(null); };
     const handleViewMember = (userId: string) => { const member = allUsers.find(u => u.id === userId); if (member) { setViewingMember(member); setView('admin'); setActiveChannelId(null); } };
@@ -269,6 +272,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
     const adminDeleteTask = (id: number) => handleDeleteTask(id);
 
     const renderMainContent = () => {
+        if (view === 'quiz') {
+            return <QuizPanel />;
+        }
         if (view === 'calendar') {
             return <CalendarView tasks={tasks} globalReminders={reminders} />;
         }
@@ -397,6 +403,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, a
                         onToggleCalendarView={handleToggleCalendarView}
                         onToggleTeamsView={handleToggleTeamsView}
                         onTogglePlanningView={handleTogglePlanningView}
+                        onToggleQuizView={handleToggleQuizView}
                         onSelectChannel={handleSelectChannel}
                         onViewMember={handleViewMember}
                     />

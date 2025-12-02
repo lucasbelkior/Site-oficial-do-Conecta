@@ -2,14 +2,14 @@
 import React from 'react';
 import type { Channel, User, Task } from '../types';
 import { Role, TaskStatus } from '../types';
-import { HashtagIcon, UserIcon, EditIcon, TrophyIcon, LogOutIcon, DashboardIcon, MessageSquareIcon, SparklesIcon, CalendarIcon, UsersIcon } from './Icons';
+import { HashtagIcon, UserIcon, EditIcon, TrophyIcon, LogOutIcon, DashboardIcon, MessageSquareIcon, SparklesIcon, CalendarIcon, UsersIcon, GamepadIcon } from './Icons';
 
 interface SidebarProps {
     channels: Channel[];
     users: User[];
     tasks: Task[];
     currentUser: User;
-    view: 'assistant' | 'tasks' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams' | 'planning';
+    view: 'assistant' | 'tasks' | 'admin' | 'social' | 'calendar' | 'channel' | 'teams' | 'planning' | 'quiz';
     activeChannelId: string | null;
     onLogout: () => void;
     onInitiateEdit: (taskId: number) => void;
@@ -19,11 +19,12 @@ interface SidebarProps {
     onToggleCalendarView: () => void;
     onToggleTeamsView: () => void;
     onTogglePlanningView?: () => void;
+    onToggleQuizView: () => void; // New handler
     onSelectChannel: (channelId: string) => void;
     onViewMember: (userId: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, currentUser, view, activeChannelId, onLogout, onInitiateEdit, onToggleAdminView, onToggleSocialView, onToggleAssistantView, onToggleCalendarView, onToggleTeamsView, onTogglePlanningView, onSelectChannel, onViewMember }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, currentUser, view, activeChannelId, onLogout, onInitiateEdit, onToggleAdminView, onToggleSocialView, onToggleAssistantView, onToggleCalendarView, onToggleTeamsView, onTogglePlanningView, onToggleQuizView, onSelectChannel, onViewMember }) => {
     const sortedUsers = [...users].sort((a, b) => b.points - a.points);
     
     // Filter only global channels (those without teamId)
@@ -87,6 +88,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ channels, users, tasks, curren
                     >
                         <UsersIcon className={`h-5 w-5 ${view === 'teams' ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]' : 'text-slate-500'}`} />
                         <span className="font-medium text-sm tracking-wide">Equipes</span>
+                    </button>
+
+                    {/* Quiz Button (New) */}
+                    <button 
+                        onClick={onToggleQuizView}
+                        className={navButtonClass(view === 'quiz')}
+                    >
+                        <GamepadIcon className={`h-5 w-5 ${view === 'quiz' ? 'text-purple-400 drop-shadow-[0_0_5px_rgba(192,132,252,0.5)]' : 'text-slate-500'}`} />
+                        <span className="font-medium text-sm tracking-wide">Quiz Conecta</span>
                     </button>
 
                      {currentUser.role === Role.PATRAO && (
